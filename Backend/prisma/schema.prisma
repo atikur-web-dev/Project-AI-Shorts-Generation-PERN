@@ -7,10 +7,31 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum LoginType {
+  google
+  github
+  email
+}
+
 model User {
-  id        String   @id @default(uuid())
-  email     String   @unique
+  id        String    @id @default(uuid())
+  googleId  String    @unique
   name      String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  email     String    @unique
+  picture   String?
+  loginType LoginType @default(google)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  sessions  Session[]
+}
+
+model Session {
+  id           String   @id @default(uuid())
+  userId       String
+  refreshToken String   @unique
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
+  user         User     @relation(fields: [userId], references: [id])
+
+  @@index([userId])
 }
