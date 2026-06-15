@@ -18,7 +18,7 @@ export const generateRefreshToken = (): string => {
 }
 
 // Refresh token hashed
-export const hastToken = (token: string) : string => {
+export const hashToken = (token: string) : string => {
     return crypto.createHash("sha256").update(token).digest("hex");
 }
 

@@ -5,6 +5,7 @@ import cookieParser from "cookie-parser";
 import morgan from "morgan";
 import { logger } from "./config/logger.js";
 import { config } from "./config/index.js";
+import { authRouter } from './routes/auth.route.js';
 
 
 const app: Application = Express();
@@ -29,6 +30,7 @@ app.get("/health", (req: Request, res: Response) => {
     })
 })
 
+app.use('/api/v1', authRouter);
 // 404 error handler
 app.use((req: Request, res: Response) => {
     res.status(400).json({
