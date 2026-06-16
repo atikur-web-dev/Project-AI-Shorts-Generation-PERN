@@ -1,8 +1,7 @@
-// src/middleware/auth.middleware.ts
-import type { Request, Response, NextFunction } from 'express';
-import { verifyAccessToken } from '../utils/token.js';
+import type { NextFunction, Request, Response } from "express";
+import { verifyAccessToken } from "../utils/token.js";
 
-// এক্সপ্রেস রিকোয়েস্টে ইউজার প্রপার্টি যোগ করার জন্য
+// Extend Express Request interface to include user property
 declare global {
   namespace Express {
     interface Request {
@@ -13,37 +12,39 @@ declare global {
   }
 }
 
-export const authenticate = (req: Request, res: Response, next: NextFunction) => {
-  // হেডার থেকে টোকেন নাও
+export const authenticate = (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  // 1. Get token from Authorization header
   const authHeader = req.headers.authorization;
-  
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return res.status(401).json({ 
-      success: false, 
-      message: 'Unauthorized: No token provided' 
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return res.status(401).json({
+      success: false,
+      message: "Unauthorized: No token provided",
     });
   }
 
-  const token = authHeader.split(' ')[1];
-  
+  // 2. Extract the actual token by removing the "Bearer" prefix
+  const token = authHeader.split(" ")[1];
   if (!token) {
-    return res.status(401).json({ 
-      success: false, 
-      message: 'Unauthorized: Invalid token format' 
+    return res.status(401).json({
+      success: false,
+      message: "Unauthorized: Invalid token format",
     });
   }
 
-  // টোকেন ভেরিফাই করো
+  // 3. Verify the access token
   const decoded = verifyAccessToken(token);
-  
-  if (!decoded || !decoded.userId) {
-    return res.status(401).json({ 
-      success: false, 
-      message: 'Unauthorized: Invalid or expired token' 
+  if (!decoded || !decoded.userId) { // Note: userId uses a lowercase "d"
+    return res.status(401).json({
+      success: false,
+      message: "Unauthorized: Invalid or expired token",
     });
   }
 
-  // ইউজার আইডি রিকোয়েস্টে যোগ করো
+  // 4. Attach the user ID to the request object and proceed
   req.user = { id: decoded.userId };
-  next();
+  return next();
 };

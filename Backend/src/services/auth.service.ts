@@ -7,18 +7,19 @@ import {
   generateRefreshToken,
   hashToken,
 } from "../utils/token.js";
-import type { GoogleUserInfo, SessionData } from "../types/auth.types.js";
+import type { SessionData } from "../types/auth.types.js";
+
+// === Part 1 ====
 
 const { GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REDIRECT_URL } = config;
-
-// Google OAuth2 ক্লায়েন্ট
+// Google OAuth2 Client
 const oauth2Client = new google.auth.OAuth2(
   GOOGLE_CLIENT_ID,
   GOOGLE_CLIENT_SECRET,
   GOOGLE_REDIRECT_URL,
 );
 
-// Google লগইন URL জেনারেট করো
+// Google Login URL generate
 export const getGoogleAuthUrl = (): string => {
   return oauth2Client.generateAuthUrl({
     access_type: "offline",
@@ -31,6 +32,7 @@ export const getGoogleAuthUrl = (): string => {
   });
 };
 
+// === part 2 ===
 // Process Google callback ( create user from code + Token)
 export const handleGoogleCallback = async (
   code: string,
@@ -76,7 +78,7 @@ export const handleGoogleCallback = async (
     data: {
       userId: user.id,
       refreshToken: hashedRefreshToken,
-      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // ৭ দিন
+      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
     },
   });
   // generate access token
@@ -98,16 +100,18 @@ export const logoutUser = async (refreshToken: string): Promise<boolean> => {
 };
 
 // Generate AccessToken using Refresh token (Token Rotation)
-export const rotateRefreshToken = async (oldRefreshToken: string): Promise<SessionData> => {
+export const rotateRefreshToken = async (
+  oldRefreshToken: string,
+): Promise<SessionData> => {
   const hashedOldToken = hashToken(oldRefreshToken);
-  
+
   // search the old token
   const session = await prisma.session.findFirst({
     where: { refreshToken: hashedOldToken },
   });
 
   if (!session || session.expiresAt < new Date()) {
-    throw new Error('Invalid or expired refresh token');
+    throw new Error("Invalid or expired refresh token");
   }
 
   // delete old session (Token Rotation)
@@ -116,7 +120,7 @@ export const rotateRefreshToken = async (oldRefreshToken: string): Promise<Sessi
   //create new session
   const newRefreshToken = generateRefreshToken();
   const hashedNewToken = hashToken(newRefreshToken);
-  
+
   await prisma.session.create({
     data: {
       userId: session.userId,
@@ -125,7 +129,7 @@ export const rotateRefreshToken = async (oldRefreshToken: string): Promise<Sessi
     },
   });
 
-  // create new Access Token 
+  // create new Access Token
   const newAccessToken = generateAccessToken(session.userId);
 
   // take user info
@@ -134,7 +138,7 @@ export const rotateRefreshToken = async (oldRefreshToken: string): Promise<Sessi
     select: { id: true, email: true, name: true, picture: true },
   });
 
-  if (!user) throw new Error('User not found');
+  if (!user) throw new Error("User not found");
 
   return {
     accessToken: newAccessToken,
