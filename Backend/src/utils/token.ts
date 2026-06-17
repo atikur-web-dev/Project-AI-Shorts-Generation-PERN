@@ -4,6 +4,12 @@ import { config } from "../config/index.js";
 import crypto from "crypto";
 import type { AuthPayload } from "../types/auth.types.js";
 
+// FIles are there
+// Generate Access token using JWT.sing
+// Generate Refresh token using crypto
+// FUnction for hashing a token sung crypto
+// Verifying token using jwr.verify
+
 /**
  * 1. ACCESS TOKEN GENERATOR
  * Creates a short-term, cryptographically signed JSON Web Token (JWT).
@@ -24,7 +30,7 @@ export const generateAccessToken = (userId: string): string => {
  */
 export const generateRefreshToken = (): string => {
   // Generates 64 random cryptographic bytes and converts them into a clean hexadecimal string
-  return crypto.pseudoRandomBytes(64).toString("hex");
+  return crypto.randomBytes(64).toString('hex');
 };
 
 /**
