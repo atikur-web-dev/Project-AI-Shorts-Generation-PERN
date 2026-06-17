@@ -5,7 +5,7 @@ import cookieParser from "cookie-parser";
 import morgan from "morgan";
 import { logger } from "./config/logger.js";
 import { config } from "./config/index.js";
-import { authRouter } from './routes/auth.route.js';
+import { authRouter } from './Routes/auth.route.js';
 
 
 const app: Application = Express();
