@@ -8,6 +8,7 @@ import {
   hashToken,
 } from "../utils/token.js";
 import type { SessionData } from "../types/auth.types.js";
+import axios from "axios";
 
 // =========================================================================
 // === PART 1: CONFIGURATION & GOOGLE LOGIN URL SETUP
@@ -31,11 +32,22 @@ export const getGoogleAuthUrl = (): string => {
     access_type: "offline", // Essential to receive a Refresh Token from Google
     prompt: "select_account", // Forces Google to show the account chooser box
     scope: [
-      "https://www.googleapis.com/auth/userinfo.email",   // Permission to see user email
+      "https://www.googleapis.com/auth/userinfo.email", // Permission to see user email
       "https://www.googleapis.com/auth/userinfo.profile", // Permission to see user name/picture
       "openid", // Standard protocol requirement to verify user identity token
     ],
   });
+};
+
+// Or GitHub with login
+export const getGitHubAuthUrl = (): string => {
+  const param = new URLSearchParams({
+    client_id: config.GITHUB_CLIENT_ID,
+    redirect_url: config.GITHUB_REDIRECT_URL,
+    scope: "user:email",
+    allow_signup: "true",
+  });
+  return `https://github.com/login/outhorize?${param.toString()}`;
 };
 
 // =========================================================================
@@ -47,7 +59,6 @@ export const getGoogleAuthUrl = (): string => {
 export const handleGoogleCallback = async (
   code: string,
 ): Promise<SessionData> => {
-  
   // STEP A: Exchange the temporary coupon code for actual security tokens
   const { tokens } = await oauth2Client.getToken(code);
   // Feed the newly received tokens into our Google manager client memory
@@ -56,7 +67,7 @@ export const handleGoogleCallback = async (
   // STEP B: Fetch the real profile information from the Google server database
   const oauth2 = google.oauth2({ auth: oauth2Client, version: "v2" });
   const { data } = await oauth2.userinfo.get();
-  
+
   // Security check: Every account must have an email; if missing, throw an error
   if (!data.email) {
     throw new Error("Email could not found");
@@ -76,6 +87,7 @@ export const handleGoogleCallback = async (
       name: data.name || "",
       picture: data.picture || "",
       googleId: data.id || "",
+      githubId: "",
       loginType: "google", // Mark them as a Google-based login user
     },
     // Filter the response data to return only safe public user profiles
@@ -90,7 +102,7 @@ export const handleGoogleCallback = async (
   // STEP D: Generate a secure 7-day long-term Refresh Token session
   const refreshToken = generateRefreshToken(); // Create random 64-byte text string
   const hashedRefreshToken = hashToken(refreshToken); // Hash it for database safety
-  
+
   // Create a brand new active session row inside the Prisma Session table
   await prisma.session.create({
     data: {
@@ -102,7 +114,7 @@ export const handleGoogleCallback = async (
 
   // STEP E: Generate the short-term Access Token ticket for API communication
   const accessToken = generateAccessToken(user.id);
-  
+
   // Return the full payload bundle back to our controller file
   return {
     accessToken,
@@ -111,6 +123,93 @@ export const handleGoogleCallback = async (
   };
 };
 
+// or for gitHub
+export const handleGitHubCallback = async (
+  code: string,
+): Promise<SessionData> => {
+  // take access token from code
+  const tokenResponse = await axios.post(
+    "https://github.com/login/oauth/access_token",
+    {
+      client_id: config.GITHUB_CLIENT_ID,
+      client_secret: config.GITHUB_CLIENT_SECRET,
+      code,
+      redirect_url: config.GITHUB_REDIRECT_URL,
+    },
+    {
+      headers: { Accept: "application/json" },
+    },
+  );
+  const accessToken = tokenResponse.data.access_token;
+  if (!accessToken) {
+    throw new Error("Failed to get GitHub access Token");
+  }
+  // take user data from github
+  const userResponse = await axios.get("https://api.github.com/user", {
+    headers: {
+      Authorization: `Bearer${accessToken}`,
+      Accept: "application/json",
+    },
+  });
+  const githubUser = userResponse.data;
+  // take user email
+  let email = githubUser.email;
+  if (!email) {
+    const emailResponse = await axios.get(
+      "https://api.github.com/user/emails",
+      {
+        headers: {
+          Authorization: `Bearer${accessToken}`,
+          Accept: "application/json",
+        },
+      },
+    );
+    const primaryEmail = emailResponse.data.find((e: any) => e.primary);
+    email = primaryEmail?.email || `${githubUser.id}@github.user`;
+  }
+  if (!email) {
+    throw new Error("GitHub email not found");
+  }
+  // create user/update
+  const user = await prisma.user.upsert({
+    where: { email },
+    update: {
+      name: githubUser.name || githubUser.login || "",
+      picture: githubUser.avater_url || "",
+      githubId: String(githubUser.id),
+    },
+    create: {
+      email,
+      name: githubUser.name || githubUser.login || "",
+      picture: githubUser.avater_url || "",
+      githubId: String(githubUser.id),
+      googleId: "",
+      loginType: "github",
+    },
+    select: {
+      id: true,
+      email: true,
+      name: true,
+      picture: true,
+    },
+  });
+  // Create session
+  const refreshToken = generateRefreshToken();
+  const hashedRefreshToken = hashToken(refreshToken);
+  await prisma.session.create({
+    data: {
+      userId: user.id,
+      refreshToken: hashedRefreshToken,
+      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+    },
+  });
+  const accessTokenJwt = generateAccessToken(user.id);
+  return {
+    accessToken: accessTokenJwt,
+    refreshToken,
+    user,
+  };
+};
 // =========================================================================
 // === PART 3: LOGOUT & TOKEN ROTATION SYSTEMS
 // =========================================================================
@@ -120,12 +219,12 @@ export const handleGoogleCallback = async (
 export const logoutUser = async (refreshToken: string): Promise<boolean> => {
   // Convert the input token into a hash format to match the stored database records
   const hashedToken = hashToken(refreshToken);
-  
+
   // Find and completely destroy any sessions holding this specific token hash
   const { count } = await prisma.session.deleteMany({
     where: { refreshToken: hashedToken },
   });
-  
+
   // Returns true if a session row was successfully found and deleted; else false
   return count > 0;
 };
