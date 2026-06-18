@@ -3,11 +3,11 @@ import { Router } from "express";
 import {
   googleLogin,
   googleCallback,
+  githubLogin,
+  githubCallback,
   logout,
   refreshToken,
   getMe,
-  githubCallback,
-  githubLogin,
 } from "../Controller/auth.controller.js";
 import { authenticate } from "../Middleware/auth.middleware.js";
 
@@ -20,7 +20,7 @@ router.get("/auth/google/callback", googleCallback);
 
 // Github routes
 router.get("/auth/github/login", githubLogin);
-router.get("auth/github/callback", githubCallback);
+router.get("/auth/github/callback", githubCallback);
 
 // common routes
 router.post("/auth/refresh", refreshToken);

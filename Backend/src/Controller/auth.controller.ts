@@ -1,3 +1,4 @@
+// Backend/src/Controller/auth.controller.ts
 import type { Request, Response } from "express";
 import {
   getGoogleAuthUrl,
@@ -18,7 +19,7 @@ import { logger } from "../config/logger.js";
  * This runs when the user clicks the "Login with Google" button on the UI.
  * Added ': Promise<any>' to tell TypeScript this function handles HTTP responses directly.
  */
-export const googleLogin = async (res: Response): Promise<any> => {
+export const googleLogin = async ( req: Request, res: Response): Promise<any> => {
   try {
     // Get the magic Google login link from our auth service
     const url = getGoogleAuthUrl();
@@ -35,7 +36,7 @@ export const googleLogin = async (res: Response): Promise<any> => {
 };
 
 // or for github
-export const githubLogin = async (res: Response): Promise<any> => {
+export const githubLogin = async ( req: Request, res: Response): Promise<any> => {
   try {
     const url = getGitHubAuthUrl();
     return res.redirect(url);

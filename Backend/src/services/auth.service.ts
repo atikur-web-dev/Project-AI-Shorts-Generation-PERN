@@ -47,7 +47,7 @@ export const getGitHubAuthUrl = (): string => {
     scope: "user:email",
     allow_signup: "true",
   });
-  return `https://github.com/login/outhorize?${param.toString()}`;
+  return `https://github.com/login/oauth/authorize?${param.toString()}`;
 };
 
 // =========================================================================
@@ -134,12 +134,13 @@ export const handleGitHubCallback = async (
       client_id: config.GITHUB_CLIENT_ID,
       client_secret: config.GITHUB_CLIENT_SECRET,
       code,
-      redirect_url: config.GITHUB_REDIRECT_URL,
+      redirect_uri: config.GITHUB_REDIRECT_URL,
     },
     {
       headers: { Accept: "application/json" },
     },
   );
+  console.log('Token Response:', tokenResponse.data);
   const accessToken = tokenResponse.data.access_token;
   if (!accessToken) {
     throw new Error("Failed to get GitHub access Token");
@@ -147,10 +148,11 @@ export const handleGitHubCallback = async (
   // take user data from github
   const userResponse = await axios.get("https://api.github.com/user", {
     headers: {
-      Authorization: `Bearer${accessToken}`,
+      Authorization: `Bearer ${accessToken}`,
       Accept: "application/json",
     },
   });
+  console.log('User Response:', userResponse.data);
   const githubUser = userResponse.data;
   // take user email
   let email = githubUser.email;
@@ -159,7 +161,7 @@ export const handleGitHubCallback = async (
       "https://api.github.com/user/emails",
       {
         headers: {
-          Authorization: `Bearer${accessToken}`,
+          Authorization: `Bearer ${accessToken}`,
           Accept: "application/json",
         },
       },
@@ -175,7 +177,7 @@ export const handleGitHubCallback = async (
     where: { email },
     update: {
       name: githubUser.name || githubUser.login || "",
-      picture: githubUser.avater_url || "",
+      picture: githubUser.avatar_url || "",
       githubId: String(githubUser.id),
     },
     create: {
