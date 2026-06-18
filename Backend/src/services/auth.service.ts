@@ -181,7 +181,7 @@ export const handleGitHubCallback = async (
     create: {
       email,
       name: githubUser.name || githubUser.login || "",
-      picture: githubUser.avater_url || "",
+      picture: githubUser.avatar_url || "",
       githubId: String(githubUser.id),
       googleId: "",
       loginType: "github",

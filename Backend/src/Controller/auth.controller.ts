@@ -1,7 +1,9 @@
 import type { Request, Response } from "express";
 import {
   getGoogleAuthUrl,
+  getGitHubAuthUrl,
   handleGoogleCallback,
+  handleGitHubCallback,
   logoutUser,
   rotateRefreshToken,
 } from "../services/auth.service.js";
@@ -32,6 +34,16 @@ export const googleLogin = async (res: Response): Promise<any> => {
   }
 };
 
+// or for github
+export const githubLogin = async (res: Response): Promise<any> => {
+  try {
+    const url = getGitHubAuthUrl();
+    return res.redirect(url);
+  } catch (error) {
+    logger.error("GitHub login error:", error);
+    return res.status(500).json({ success: false, message: "Login failed" });
+  }
+};
 /**
  * 2. HANDLE GOOGLE CALLBACK URL
  * Google sends the user back to this function after a successful login.
@@ -74,6 +86,35 @@ export const googleCallback = async (
   }
 };
 
+// or git handle back
+export const githubCallback = async (
+  req: Request,
+  res: Response,
+): Promise<any> => {
+  try {
+    const { code } = req.query;
+    if (!code || typeof code !== "string") {
+      return res
+        .status(400)
+        .json({ success: false, message: "Authorization code missing" });
+    }
+
+    const { accessToken, refreshToken, user } =
+      await handleGitHubCallback(code);
+    setRefreshTokenCookie(res, refreshToken);
+
+    return res.json({
+      success: true,
+      accessToken,
+      user,
+    });
+  } catch (error) {
+    logger.error("GitHub callback error", error);
+    return res
+      .status(500)
+      .json({ success: false, message: "Github authentication failed" });
+  }
+};
 /**
  * 3. USER LOGOUT
  * This runs when a user clicks the "Logout" button.
