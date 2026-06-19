@@ -67,7 +67,6 @@ export const handleGoogleCallback = async (code: string): Promise<SessionData> =
 
   // Create session
   const refreshToken = generateRefreshToken();
-  console.log("👉 REAL RAW REFRESH TOKEN IS:", refreshToken);
 
   const hashedRefreshToken = hashToken(refreshToken);
 
