@@ -15,4 +15,12 @@ export const envSchema = z.object({
   GITHUB_CLIENT_ID: z.string().min(1),
   GITHUB_CLIENT_SECRET: z.string().min(1),
   GITHUB_REDIRECT_URL: z.string().url(),
+
+  // Google gemini
+  GOOGLE_GEMINI_API_KEY: z.string().min(1),
+
+  // Cloudinary
+  CLOUDINARY_CLOUD_NAME: z.string().min(1),
+  CLOUDINARY_API_KEY: z.string().min(1),
+  CLOUDINARY_API_SECRET: z.string().min(1),
 });
