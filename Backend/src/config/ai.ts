@@ -1,3 +1,4 @@
+// Backend/src/config/ai.ts
 import { GoogleGenAI } from "@google/genai";
 import { config } from "./index.js";
 
