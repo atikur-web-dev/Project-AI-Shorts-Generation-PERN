@@ -8,8 +8,8 @@ import {
   logout,
   refreshToken,
   getMe,
-} from "../Controller/auth.controller.js";
-import { authenticate } from "../Middleware/auth.middleware.js";
+} from "../controller/index.js";  
+import { authenticate } from "../middleware/auth.middleware.js";
 
 // Initialize the Express Router machine
 const router = Router();
