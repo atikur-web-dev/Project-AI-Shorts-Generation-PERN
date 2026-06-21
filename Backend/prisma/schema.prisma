@@ -1,3 +1,5 @@
+// prisma/schema.prisma
+
 generator client {
   provider = "prisma-client-js"
 }
@@ -14,16 +16,19 @@ enum LoginType {
 }
 
 model User {
-  id        String    @id @default(uuid())
-  googleId  String    @unique
-  githubId  String    @unique
-  name      String
-  email     String    @unique
-  picture   String?
-  loginType LoginType @default(google)
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  sessions  Session[]
+  id               String            @id @default(uuid())
+  googleId         String            @unique
+  githubId         String            @unique
+  name             String
+  email            String            @unique
+  picture          String?
+  loginType        LoginType         @default(google)
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  sessions         Session[]
+  userSubscription UserSubscription?
+
+  projects         Project[]
 }
 
 model Session {
@@ -33,6 +38,36 @@ model Session {
   expiresAt    DateTime
   createdAt    DateTime @default(now())
   user         User     @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+}
+
+model UserSubscription {
+  id        String   @id @default(uuid())
+  userId    String   @unique
+  credits   Int      @default(30)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+
+model Project {
+  id                 String   @id @default(uuid())
+  projectName        String   @default("Untitled")
+  productName        String   @default("Product")
+  productDescription String?  @db.Text
+  userPrompt         String?  @db.Text
+  productImage       String   
+  modelImage         String   
+  generatedImage     String   
+  generatedVideo     String   
+  aspectRatio        String   @default("9:16")
+  userId             String
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
 }
