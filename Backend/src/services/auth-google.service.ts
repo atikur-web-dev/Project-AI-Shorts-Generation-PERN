@@ -56,6 +56,9 @@ export const handleGoogleCallback = async (code: string): Promise<SessionData> =
       googleId: data.id || "",
       githubId: "",
       loginType: "google",
+      userSubscription: {
+      create: {} 
+    }
     },
     select: {
       id: true,
@@ -67,8 +70,9 @@ export const handleGoogleCallback = async (code: string): Promise<SessionData> =
 
   // Create session
   const refreshToken = generateRefreshToken();
-
+console.log("Refresh Token :", refreshToken)
   const hashedRefreshToken = hashToken(refreshToken);
+
 
   await prisma.session.create({
     data: {

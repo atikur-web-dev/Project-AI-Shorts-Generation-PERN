@@ -28,7 +28,7 @@ export const googleLogin = async (req: Request, res: Response): Promise<any> => 
 export const googleCallback = async (req: Request, res: Response): Promise<any> => {
   try {
     const { code } = req.query;
-
+    
     if (!code || typeof code !== "string") {
       return res
         .status(400)
@@ -36,6 +36,7 @@ export const googleCallback = async (req: Request, res: Response): Promise<any> 
     }
 
     const { accessToken, refreshToken, user } = await handleGoogleCallback(code);
+    console.log("Real Access Token : ", accessToken)
 
     // Store refresh token in HTTP-only cookie
     setRefreshTokenCookie(res, refreshToken);

@@ -82,6 +82,9 @@ export const handleGitHubCallback = async (code: string): Promise<SessionData> =
       githubId: String(githubUser.id),
       googleId: "",
       loginType: "github",
+      userSubscription: {
+      create: {} 
+    }
     },
     select: {
       id: true,
