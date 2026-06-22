@@ -1,61 +1,107 @@
-// Backend/src/services/ai.service.ts
-import { uploadBufferToCloudinary } from "./cloudinary.service.js";
-import { logger } from "../config/logger.js";
-import axios from "axios";
-import type { Express } from "express";
+import {
+  HarmBlockThreshold,
+  HarmCategory,
+  type GenerateContentConfig,
+} from '@google/genai';
+import ai from '../config/ai.js';
+import { convertToBase64 } from '../utils/image.helper.js';
+import { uploadBufferToCloudinary } from './cloudinary.service.js';
+import { logger } from '../config/logger.js';
+import type { Express } from 'express';
 
 interface GenerateImageInput {
   userPrompt?: string;
   aspectRatio?: string;
 }
 
-/**
- * CORE AI IMAGE GENERATOR SERVICE (100% Working Production Stable)
- * Generates an ultra-realistic e-commerce asset using a high-speed stable AI Engine.
- */
 export const generateImageWithAI = async (
   productImage: Express.Multer.File,
   modelImage: Express.Multer.File,
-  body: GenerateImageInput,
+  body: GenerateImageInput
 ): Promise<string> => {
   try {
-    const userPrompt = body.userPrompt || "premium studio lighting, 8k resolution, cinematic look";
-
-    // ১. একটি স্ট্রং এবং বুলেটপ্রুফ প্রম্পট সাজানো
-    const promptText = `A professional e-commerce studio advertisement photo. Stitcing a high quality product and a fashion model together. ${userPrompt}`;
-
-    logger.info("Step 1: Requesting high-speed AI Image Engine...");
-
-    // ২. পিয়নের মতো সরাসরি একটি ফ্রি এআই গেটওয়েতে রিকোয়েস্ট পাঠানো
-    // এটি জেমিনাই এররের প্যারা ছাড়া ১ সেকেন্ডে র-বাইনারি ইমেজ ডাটা ফেরত পাঠায়
-    const response = await axios.get(
-      `https://pollinations.ai{encodeURIComponent(promptText)}`,
-      {
-        params: {
-          width: body.aspectRatio === "1:1" ? 1080 : 1080,
-          height: body.aspectRatio === "1:1" ? 1080 : 1920, // 9:16 Shorts size mapping
-          nologo: "true",
-          private: "true",
+    // 1. Safety settings & Generation Config
+    const generationConfig: GenerateContentConfig = {
+      responseModalities: ['TEXT', 'IMAGE'],
+      safetySettings: [
+        {
+          category: HarmCategory.HARM_CATEGORY_HATE_SPEECH,
+          threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH,
         },
-        responseType: "arraybuffer", // ডাইরেক্ট র-মেমোরি বাফার ডাটা চেয়ে নেওয়া
-      }
-    );
+        {
+          category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
+          threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH,
+        },
+        {
+          category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
+          threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH,
+        },
+        {
+          category: HarmCategory.HARM_CATEGORY_HARASSMENT,
+          threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH,
+        },
+      ],
+    };
 
-    // ৩. রেসপন্স ডাটাকে মেমরির বাফারে রূপান্তর করা
-    const buffer = Buffer.from(response.data);
-    if (!buffer || buffer.length === 0) {
-      throw new Error("Failed to receive binary bytes from the image engine");
+    // 2. Convert reference images using await for the new async sharp helper
+    const productData = await convertToBase64(productImage.path, productImage.mimetype);
+    const modelData = await convertToBase64(modelImage.path, modelImage.mimetype);
+
+    // 3. Build text prompt instructions
+    const userPrompt = body.userPrompt || '';
+    const promptText = `Combine the person and product into realistic e-commerce imagery. 
+    Make the person naturally hold or use the product. Match lighting, shadows, scale, aspect ratio (${body.aspectRatio || '9:16'}) and perspective. 
+    Make the person stand in professional studio lighting. Output e-commerce quality image realistic imagery ${userPrompt}`;
+
+    // 4. Call Gemini API passing explicitly cast parts objects
+    const response = await ai.models.generateContent({
+      model: 'gemini-3.1-flash-image',
+      contents: [
+        {
+          role: 'user',
+          parts: [
+            { text: promptText } as any,
+            {
+              inlineData: productData.inlineData,
+              mimeType: productImage.mimetype,
+            } as any,
+            {
+              inlineData: modelData.inlineData,
+              mimeType: modelImage.mimetype,
+            } as any,
+          ],
+        } as any,
+      ],
+      config: generationConfig,
+    });
+
+    // 5. Extract the generated image buffer
+    const parts = response?.candidates?.[0]?.content?.parts;
+    if (!parts) {
+      throw new Error('No components returned in the generation content path');
     }
 
-    // ৪. মেমরির বাফারটি ক্লাউডিনারির মেঘের লকারে আপলোড করা
-    logger.info("Step 2: Uploading stable AI image buffer to Cloudinary...");
+    let buffer: Buffer | null = null;
+    for (const part of parts) {
+      if (part.inlineData) {
+        // The inlineData string is returned directly in the new SDK
+        const imageData = part.inlineData as unknown as string;
+        buffer = Buffer.from(imageData, 'base64');
+        break;
+      }
+    }
+
+    if (!buffer) {
+      throw new Error('Image generation failed - No inline binary payload detected');
+    }
+
+    // 6. Upload compiled buffer directly to Cloudinary
     const url = await uploadBufferToCloudinary(buffer);
 
-    logger.info("AI Image successfully generated and saved to Cloudinary!");
+    logger.info('Image generated and uploaded successfully');
     return url;
-
-  } catch (error: any) {
-    logger.error("AI Generation Service Engine failed completely:", error);
-    throw new Error(`AI Engine Error: ${error.message || "Failed to process imagery"}`);
+  } catch (error) {
+    logger.error('AI generation failed:', error);
+    throw new Error('Failed to generate image');
   }
 };
