@@ -1,4 +1,3 @@
-// src/services/auth-github.service.ts
 import { prisma } from "../lib/prisma.js";
 import { config } from "../config/index.js";
 import {
@@ -8,6 +7,7 @@ import {
 } from "../utils/token.js";
 import type { SessionData } from "../types/auth.types.js";
 import axios from "axios";
+import { CreditService } from "./credit.service.js";
 
 // Generate GitHub Login URL
 export const getGitHubAuthUrl = (): string => {

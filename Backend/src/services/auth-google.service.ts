@@ -1,4 +1,3 @@
-// src/services/auth-google.service.ts
 import { google } from "googleapis";
 import { prisma } from "../lib/prisma.js";
 import { config } from "../config/index.js";
