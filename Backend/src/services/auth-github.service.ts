@@ -1,7 +1,11 @@
 // src/services/auth-github.service.ts
 import { prisma } from "../lib/prisma.js";
 import { config } from "../config/index.js";
-import { generateAccessToken, generateRefreshToken, hashToken } from "../utils/token.js";
+import {
+  generateAccessToken,
+  generateRefreshToken,
+  hashToken,
+} from "../utils/token.js";
 import type { SessionData } from "../types/auth.types.js";
 import axios from "axios";
 
@@ -17,7 +21,9 @@ export const getGitHubAuthUrl = (): string => {
 };
 
 // Process GitHub Callback
-export const handleGitHubCallback = async (code: string): Promise<SessionData> => {
+export const handleGitHubCallback = async (
+  code: string,
+): Promise<SessionData> => {
   // Get access token from GitHub
   const tokenResponse = await axios.post(
     "https://github.com/login/oauth/access_token",
@@ -83,8 +89,10 @@ export const handleGitHubCallback = async (code: string): Promise<SessionData> =
       googleId: "",
       loginType: "github",
       userSubscription: {
-      create: {} 
-    }
+        create: {
+          credits: 30,
+        },
+      },
     },
     select: {
       id: true,

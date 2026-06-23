@@ -2,7 +2,11 @@
 import { google } from "googleapis";
 import { prisma } from "../lib/prisma.js";
 import { config } from "../config/index.js";
-import { generateAccessToken, generateRefreshToken, hashToken } from "../utils/token.js";
+import {
+  generateAccessToken,
+  generateRefreshToken,
+  hashToken,
+} from "../utils/token.js";
 import type { SessionData } from "../types/auth.types.js";
 
 // Google OAuth Configuration
@@ -28,7 +32,9 @@ export const getGoogleAuthUrl = (): string => {
 };
 
 // Process Google Callback
-export const handleGoogleCallback = async (code: string): Promise<SessionData> => {
+export const handleGoogleCallback = async (
+  code: string,
+): Promise<SessionData> => {
   // Exchange code for tokens
   const { tokens } = await oauth2Client.getToken(code);
   oauth2Client.setCredentials(tokens);
@@ -57,8 +63,10 @@ export const handleGoogleCallback = async (code: string): Promise<SessionData> =
       githubId: "",
       loginType: "google",
       userSubscription: {
-      create: {} 
-    }
+        create: {
+          credits: 30,
+        },
+      },
     },
     select: {
       id: true,
@@ -70,9 +78,8 @@ export const handleGoogleCallback = async (code: string): Promise<SessionData> =
 
   // Create session
   const refreshToken = generateRefreshToken();
-console.log("Refresh Token :", refreshToken)
+  console.log("Refresh Token :", refreshToken);
   const hashedRefreshToken = hashToken(refreshToken);
-
 
   await prisma.session.create({
     data: {
