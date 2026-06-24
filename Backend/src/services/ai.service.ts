@@ -1,32 +1,38 @@
 // Backend/src/services/ai.service.ts
+
 import {
   HarmBlockThreshold,
   HarmCategory,
   type GenerateContentConfig,
 } from "@google/genai";
+
 import ai from "../config/ai.js";
 import { readFileSync } from "fs";
-import { convertToBase64 } from "../utils/image.helper.js";
 import { uploadBufferToCloudinary } from "./cloudinary.service.js";
 import { logger } from "../config/logger.js";
 import axios from "axios";
-import type { Express } from "express";
 import fs, { mkdirSync } from "fs";
 import path from "path";
 import { cloudinary } from "../lib/cloudinary.js";
 import type { Project } from "@prisma/client";
+import type { Express } from "express";
+
 interface GenerateImageInput {
   userPrompt?: string;
   aspectRatio?: string;
 }
 
+/**
+ * ==========================
+ * IMAGE GENERATION (GEMINI)
+ * ==========================
+ */
 export const generateImageWithAI = async (
   productImage: Express.Multer.File,
   modelImage: Express.Multer.File,
   body: GenerateImageInput,
 ): Promise<string> => {
   try {
-    // 1. Safety settings & Generation Config
     const generationConfig: GenerateContentConfig = {
       responseModalities: ["TEXT", "IMAGE"],
       safetySettings: [
@@ -49,74 +55,63 @@ export const generateImageWithAI = async (
       ],
     };
 
-    // 2. Convert reference images using await for the new async sharp helper
-    const product = {
+    // Convert images → base64 inline parts
+    const productPart = {
       inlineData: {
         mimeType: productImage.mimetype || "image/jpeg",
         data: readFileSync(productImage.path).toString("base64"),
       },
     };
-    const model = {
+
+    const modelPart = {
       inlineData: {
         mimeType: modelImage.mimetype || "image/jpeg",
         data: readFileSync(modelImage.path).toString("base64"),
       },
     };
 
-    // 3. Build text prompt instructions
-    const userPrompt = body.userPrompt || "";
-    const promptText = `Combine the person and product into realistic e-commerce imagery. 
-    Make the person naturally hold or use the product. Match lighting, shadows, scale, aspect ratio (${body.aspectRatio || "9:16"}) and perspective. 
-    Make the person stand in professional studio lighting. Output e-commerce quality image realistic imagery ${userPrompt}`;
-    const contents = [{ text: promptText }, product, model];
-    // 4. Call Gemini API passing explicitly cast parts objects
+    const promptText = `
+Combine the person and product into realistic e-commerce imagery.
+Make the person naturally hold or use the product.
+Match lighting, shadows, scale, and perspective.
+Aspect ratio: ${body.aspectRatio || "9:16"}.
+Professional studio lighting, ultra realistic e-commerce quality.
+${body.userPrompt || ""}
+`;
+
     const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
+      model: "gemini-3-pro-image-preview",
       contents: [
         {
           role: "user",
-          parts: [
-            { text: promptText } as any,
-            {
-              inlineData: product.inlineData,
-              mimeType: productImage.mimetype,
-            } as any,
-            {
-              inlineData: model.inlineData,
-              mimeType: modelImage.mimetype,
-            } as any,
-          ],
-        } as any,
+          parts: [{ text: promptText }, productPart, modelPart],
+        },
       ],
       config: generationConfig,
     });
 
-    // 5. Extract the generated image buffer
     const parts = response?.candidates?.[0]?.content?.parts;
+
     if (!parts) {
-      throw new Error("No components returned in the generation content path");
+      throw new Error("No response parts returned from Gemini");
     }
 
     let buffer: Buffer | null = null;
+
     for (const part of parts) {
-      if (part.inlineData) {
-        // The inlineData string is returned directly in the new SDK
-        const imageData = part.inlineData as unknown as string;
-        buffer = Buffer.from(imageData, "base64");
+      if (part.inlineData?.data) {
+        buffer = Buffer.from(part.inlineData.data, "base64");
         break;
       }
     }
 
     if (!buffer) {
-      throw new Error(
-        "Image generation failed - No inline binary payload detected",
-      );
+      throw new Error("No generated image buffer found in response");
     }
 
-    // 6. Upload compiled buffer directly to Cloudinary
     const url = await uploadBufferToCloudinary(buffer);
 
-    logger.info("Image generated and uploaded successfully");
+    logger.info("Image generated successfully");
     return url;
   } catch (error) {
     logger.error("AI generation failed:", error);
@@ -124,27 +119,30 @@ export const generateImageWithAI = async (
   }
 };
 
+/**
+ * ==========================
+ * VIDEO GENERATION (VEO)
+ * ==========================
+ */
 export const generateVideoWithAI = async (
   project: Project,
 ): Promise<string> => {
   try {
-    // 1. Build prompt
-    const prompt = `Make the person showcase the product which is ${project.productName}. ${project.productDescription || ""}`;
+    const prompt = `
+Make the person showcase the product: ${project.productName}.
+${project.productDescription || ""}
+`;
 
-    // 2. Get the generated image
     if (!project.generatedImage) {
-      throw new Error(
-        "Generated image not found. Please generate image first.",
-      );
+      throw new Error("Generated image not found");
     }
 
-    // 3. Download the image
     const imageResponse = await axios.get(project.generatedImage, {
       responseType: "arraybuffer",
     });
+
     const imageBuffer = Buffer.from(imageResponse.data);
 
-    // 4. Start video generation
     let operation = await ai.models.generateVideos({
       model: "veo-3.1-generate-preview",
       prompt,
@@ -159,15 +157,15 @@ export const generateVideoWithAI = async (
       },
     });
 
-    // 5. Poll for completion (max 5 minutes)
-    const maxAttempts = 30; // 30 * 10s = 5 minutes
+    const maxAttempts = 30;
     let attempts = 0;
 
     while (!operation.done && attempts < maxAttempts) {
-      await new Promise((resolve) => setTimeout(resolve, 10000));
+      await new Promise((r) => setTimeout(r, 10000));
       operation = await ai.operations.getVideosOperation({
-        operation: operation,
+        operation,
       });
+
       attempts++;
       logger.info(`Video generation progress: ${attempts * 10}s`);
     }
@@ -176,38 +174,36 @@ export const generateVideoWithAI = async (
       throw new Error("Video generation timed out");
     }
 
-    // 6. Check for safety filters
     if (operation?.response?.raiMediaFilteredReasons?.length) {
       throw new Error(operation.response.raiMediaFilteredReasons[0]);
     }
 
-    if (!operation?.response?.generatedVideos?.[0]?.video) {
+    const videoFile = operation?.response?.generatedVideos?.[0]?.video;
+
+    if (!videoFile) {
       throw new Error("No video generated");
     }
 
-    // 7. Download video
     const videosDir = path.resolve(process.cwd(), "videos");
     mkdirSync(videosDir, { recursive: true });
 
-    const fileName = `video-${Date.now()}.mp4`;
-    const filePath = path.join(videosDir, fileName);
+    const filePath = path.join(videosDir, `video-${Date.now()}.mp4`);
 
     await ai.files.download({
-      file: operation.response.generatedVideos[0].video,
+      file: videoFile,
       downloadPath: filePath,
     });
 
-    // 8. Upload to Cloudinary
     const uploadResult = await cloudinary.uploader.upload(filePath, {
       folder: "ai-shorts",
       resource_type: "video",
     });
 
-    // 9. Cleanup
     await fs.promises.unlink(filePath).catch(() => {});
-    await fs.promises.rmdir(videosDir).catch(() => {});
+    await fs.promises.rm(videosDir, { recursive: true, force: true });
 
-    logger.info("Video generated and uploaded successfully");
+    logger.info("Video generated successfully");
+
     return uploadResult.secure_url;
   } catch (error) {
     logger.error("Video generation failed:", error);
