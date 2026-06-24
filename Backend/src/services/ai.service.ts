@@ -1,5 +1,4 @@
 // Backend/src/services/ai.service.ts
-
 import {
   HarmBlockThreshold,
   HarmCategory,
@@ -22,11 +21,7 @@ interface GenerateImageInput {
   aspectRatio?: string;
 }
 
-/**
- * ==========================
- * IMAGE GENERATION (GEMINI)
- * ==========================
- */
+// Image generation
 export const generateImageWithAI = async (
   productImage: Express.Multer.File,
   modelImage: Express.Multer.File,
@@ -119,11 +114,7 @@ ${body.userPrompt || ""}
   }
 };
 
-/**
- * ==========================
- * VIDEO GENERATION (VEO)
- * ==========================
- */
+// Generate Video
 export const generateVideoWithAI = async (
   project: Project,
 ): Promise<string> => {
@@ -137,18 +128,23 @@ ${project.productDescription || ""}
       throw new Error("Generated image not found");
     }
 
+    // 1. Download image safely
     const imageResponse = await axios.get(project.generatedImage, {
       responseType: "arraybuffer",
     });
 
     const imageBuffer = Buffer.from(imageResponse.data);
+    const mimeType = project.generatedImage.includes(".png")
+      ? "image/png"
+      : "image/jpeg";
 
+    // 2. Start video generation
     let operation = await ai.models.generateVideos({
       model: "veo-3.1-generate-preview",
       prompt,
       image: {
         imageBytes: imageBuffer.toString("base64"),
-        mimeType: "image/png",
+        mimeType,
       },
       config: {
         aspectRatio: project.aspectRatio || "9:16",
@@ -157,50 +153,67 @@ ${project.productDescription || ""}
       },
     });
 
+    // 3. Polling (safe loop)
     const maxAttempts = 30;
     let attempts = 0;
 
     while (!operation.done && attempts < maxAttempts) {
-      await new Promise((r) => setTimeout(r, 10000));
+      await new Promise((resolve) => setTimeout(resolve, 8000)); // 8s safer
+
       operation = await ai.operations.getVideosOperation({
         operation,
       });
 
       attempts++;
-      logger.info(`Video generation progress: ${attempts * 10}s`);
+      logger.info(`Video generation progress: ${attempts * 8}s`);
     }
 
+    // 4. Timeout check
     if (!operation.done) {
       throw new Error("Video generation timed out");
     }
 
+    // 5. Safety filter check
     if (operation?.response?.raiMediaFilteredReasons?.length) {
-      throw new Error(operation.response.raiMediaFilteredReasons[0]);
+      throw new Error(
+        operation.response.raiMediaFilteredReasons[0],
+      );
     }
 
-    const videoFile = operation?.response?.generatedVideos?.[0]?.video;
+    // 6. Extract video safely
+    const videoFile =
+      operation?.response?.generatedVideos?.[0]?.video ?? null;
 
     if (!videoFile) {
-      throw new Error("No video generated");
+      throw new Error("No video generated from AI response");
     }
 
+    // 7. Save temporary file
     const videosDir = path.resolve(process.cwd(), "videos");
     mkdirSync(videosDir, { recursive: true });
 
-    const filePath = path.join(videosDir, `video-${Date.now()}.mp4`);
+    const filePath = path.join(
+      videosDir,
+      `video-${Date.now()}.mp4`,
+    );
 
     await ai.files.download({
       file: videoFile,
       downloadPath: filePath,
     });
 
-    const uploadResult = await cloudinary.uploader.upload(filePath, {
-      folder: "ai-shorts",
-      resource_type: "video",
-    });
+    
+    // 8. Upload to Cloudinary
+    const uploadResult = await cloudinary.uploader.upload(
+      filePath,
+      {
+        folder: "ai-shorts",
+        resource_type: "video",
+      },
+    );
 
+    // 9. Cleanup 
     await fs.promises.unlink(filePath).catch(() => {});
-    await fs.promises.rm(videosDir, { recursive: true, force: true });
 
     logger.info("Video generated successfully");
 
