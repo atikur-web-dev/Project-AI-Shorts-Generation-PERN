@@ -10,7 +10,7 @@ import { readFileSync } from "fs";
 import { uploadBufferToCloudinary } from "./cloudinary.service.js";
 import { logger } from "../config/logger.js";
 import axios from "axios";
-import fs, { mkdirSync } from "fs";
+import fs, { mkdirSync, rmSync } from "fs";
 import path from "path";
 import { cloudinary } from "../lib/cloudinary.js";
 import type { Project } from "@prisma/client";
@@ -21,6 +21,8 @@ interface GenerateImageInput {
   aspectRatio?: string;
 }
 
+const VIDEO_POLL_INTERVAL = 10000; // 10 seconds
+const MAX_POLL_ATTEMPTS = 30; // 5 minutes
 // Image generation
 export const generateImageWithAI = async (
   productImage: Express.Multer.File,
@@ -115,30 +117,49 @@ ${body.userPrompt || ""}
 };
 
 // Generate Video
+// Generate Video
 export const generateVideoWithAI = async (
   project: Project,
 ): Promise<string> => {
   try {
+    logger.info(
+      `Starting video generation for project: ${project.id}`,
+    );
+
+    // 1. Validate
+    if (!project.generatedImage) {
+      throw new Error(
+        "Generated image not found. Generate image first.",
+      );
+    }
+
+    // 2. Build prompt
     const prompt = `
-Make the person showcase the product: ${project.productName}.
+Show the person holding the ${project.productName} naturally.
+Professional studio lighting.
+E-commerce style.
 ${project.productDescription || ""}
 `;
 
-    if (!project.generatedImage) {
-      throw new Error("Generated image not found");
-    }
-
-    // 1. Download image safely
-    const imageResponse = await axios.get(project.generatedImage, {
-      responseType: "arraybuffer",
-    });
+    // 3. Download image
+    const imageResponse = await axios.get(
+      project.generatedImage,
+      {
+        responseType: "arraybuffer",
+        timeout: 30000,
+      },
+    );
 
     const imageBuffer = Buffer.from(imageResponse.data);
-    const mimeType = project.generatedImage.includes(".png")
+
+    // 4. Detect mime type
+    const mimeType = project.generatedImage
+      .toLowerCase()
+      .includes(".png")
       ? "image/png"
       : "image/jpeg";
 
-    // 2. Start video generation
+    // 5. Start video generation
     let operation = await ai.models.generateVideos({
       model: "veo-3.1-generate-preview",
       prompt,
@@ -153,48 +174,68 @@ ${project.productDescription || ""}
       },
     });
 
-    // 3. Polling (safe loop)
-    const maxAttempts = 30;
+    // 6. Poll for completion
     let attempts = 0;
 
-    while (!operation.done && attempts < maxAttempts) {
-      await new Promise((resolve) => setTimeout(resolve, 8000)); // 8s safer
+    while (
+      !operation.done &&
+      attempts < MAX_POLL_ATTEMPTS
+    ) {
+      await new Promise((resolve) =>
+        setTimeout(resolve, VIDEO_POLL_INTERVAL),
+      );
 
-      operation = await ai.operations.getVideosOperation({
-        operation,
-      });
+      operation =
+        await ai.operations.getVideosOperation({
+          operation,
+        });
 
       attempts++;
-      logger.info(`Video generation progress: ${attempts * 8}s`);
+
+      logger.info(
+        `Video progress: ${attempts * 10}s`,
+      );
     }
 
-    // 4. Timeout check
     if (!operation.done) {
-      throw new Error("Video generation timed out");
+      throw new Error(
+        "Video generation timed out after 5 minutes",
+      );
     }
 
-    // 5. Safety filter check
-    if (operation?.response?.raiMediaFilteredReasons?.length) {
+    // 7. Check safety filters
+    if (
+      operation?.response?.raiMediaFilteredReasons
+        ?.length
+    ) {
       throw new Error(
         operation.response.raiMediaFilteredReasons[0],
       );
     }
 
-    // 6. Extract video safely
     const videoFile =
-      operation?.response?.generatedVideos?.[0]?.video ?? null;
+      operation?.response?.generatedVideos?.[0]
+        ?.video;
 
     if (!videoFile) {
-      throw new Error("No video generated from AI response");
+      throw new Error("No video generated");
     }
 
-    // 7. Save temporary file
-    const videosDir = path.resolve(process.cwd(), "videos");
-    mkdirSync(videosDir, { recursive: true });
+    // 8. Download video
+    const videosDir = path.resolve(
+      process.cwd(),
+      "videos",
+    );
+
+    mkdirSync(videosDir, {
+      recursive: true,
+    });
+
+    const fileName = `video-${Date.now()}-${project.id}.mp4`;
 
     const filePath = path.join(
       videosDir,
-      `video-${Date.now()}.mp4`,
+      fileName,
     );
 
     await ai.files.download({
@@ -202,24 +243,47 @@ ${project.productDescription || ""}
       downloadPath: filePath,
     });
 
-    
-    // 8. Upload to Cloudinary
-    const uploadResult = await cloudinary.uploader.upload(
-      filePath,
-      {
-        folder: "ai-shorts",
-        resource_type: "video",
-      },
+    // 9. Upload to Cloudinary
+    const uploadResult =
+      await cloudinary.uploader.upload(
+        filePath,
+        {
+          folder: "ai-shorts/videos",
+          resource_type: "video",
+          public_id: `video-${project.id}`,
+        },
+      );
+
+    // 10. Cleanup
+    try {
+      rmSync(filePath, { force: true });
+
+      rmSync(videosDir, {
+        recursive: true,
+        force: true,
+      });
+    } catch (cleanupError) {
+      logger.warn(
+        "Video cleanup warning:",
+        cleanupError,
+      );
+    }
+
+    logger.info(
+      `Video generated: ${uploadResult.secure_url}`,
     );
-
-    // 9. Cleanup 
-    await fs.promises.unlink(filePath).catch(() => {});
-
-    logger.info("Video generated successfully");
 
     return uploadResult.secure_url;
   } catch (error) {
-    logger.error("Video generation failed:", error);
-    throw new Error("Failed to generate video");
+    logger.error(
+      "Video generation failed:",
+      error,
+    );
+
+    throw new Error(
+      error instanceof Error
+        ? error.message
+        : "Failed to generate video",
+    );
   }
 };

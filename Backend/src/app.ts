@@ -7,6 +7,7 @@ import { logger } from "./config/logger.js";
 import { config } from "./config/index.js";
 import { authRouter } from './routes/auth.route.js';
 import { projectRouter } from './routes/project.route.js';
+import { apiLimiter, aiLimiter } from "./config/rate-limit.js";
 
 
 const app: Application = Express();
@@ -33,6 +34,10 @@ app.get("/health", (req: Request, res: Response) => {
 
 app.use('/api/v1', authRouter);
 app.use('/api/v1', projectRouter);
+
+app.use('/api', apiLimiter);
+app.use('/api/v1/projects', aiLimiter);
+
 // 404 error handler
 app.use((req: Request, res: Response) => {
     res.status(400).json({
