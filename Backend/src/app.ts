@@ -8,6 +8,7 @@ import { config } from "./config/index.js";
 import { authRouter } from './routes/auth.route.js';
 import { projectRouter } from './routes/project.route.js';
 import { apiLimiter, aiLimiter } from "./config/rate-limit.js";
+import { errorHandler } from './middleware/error.middleware.js';
 
 
 const app: Application = Express();
@@ -54,5 +55,8 @@ app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
         message: config.NODE_ENV === "development" ? err.message : "Internal Server error"
     })
 })
+
+// error handler
+app.use(errorHandler);
 
 export {app};
