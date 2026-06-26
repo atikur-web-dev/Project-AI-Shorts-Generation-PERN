@@ -9,6 +9,7 @@ import { authRouter } from './routes/auth.route.js';
 import { projectRouter } from './routes/project.route.js';
 import { apiLimiter, aiLimiter } from "./config/rate-limit.js";
 import { errorHandler } from './middleware/error.middleware.js';
+import { orderRouter } from "./routes/order.route.js";
 
 
 const app: Application = Express();
@@ -35,9 +36,9 @@ app.get("/health", (req: Request, res: Response) => {
 
 app.use('/api/v1', authRouter);
 app.use('/api/v1', projectRouter);
-
 app.use('/api', apiLimiter);
 app.use('/api/v1/projects', aiLimiter);
+app.use('/api/v1', orderRouter);
 
 // 404 error handler
 app.use((req: Request, res: Response) => {
