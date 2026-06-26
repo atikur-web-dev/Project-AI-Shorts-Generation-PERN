@@ -4,7 +4,7 @@ import { logger } from '../config/logger.js';
 
 export const createOrder = async (userId: string, subscriptionId: string) => {
   // 1. Subscription খুঁজে বের করো
-  const subscription = await prisma.subscription.findUnique({
+  const subscription = await prisma.userSubscription.findUnique({
     where: { id: subscriptionId },
   });
 
@@ -31,7 +31,7 @@ export const getOrderById = async (orderId: string) => {
     where: { id: orderId },
     include: {
       user: true,
-      subscription: true,
+      userSubscription: true,
     },
   });
 };
