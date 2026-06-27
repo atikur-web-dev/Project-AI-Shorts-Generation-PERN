@@ -1,39 +1,67 @@
 // Backend/prisma/seed.ts
-import { PrismaClient } from '../generated/prisma/client';
-const prisma = new PrismaClient();
+import "dotenv/config";
+import { PrismaPg } from "@prisma/adapter-pg";
+import { PrismaClient } from "../src/generated/prisma/client";
+
+const adapter = new PrismaPg({
+  connectionString: process.env.DATABASE_URL!,
+});
+
+const prisma = new PrismaClient({
+  adapter,
+});
 
 async function main() {
   const plans = [
-    { name: 'free', price: 0, credits: 30 },
-    { name: 'basic', price: 499, credits: 100 },
-    { name: 'premium', price: 999, credits: 300 },
+    {
+      name: "free",
+      price: 0,
+      credits: 30,
+    },
+    {
+      name: "basic",
+      price: 499,
+      credits: 100,
+    },
+    {
+      name: "premium",
+      price: 999,
+      credits: 300,
+    },
   ];
 
   for (const plan of plans) {
-    const existingPlan = await prisma.userSubscription.findFirst({
-      where: { price: plan.price, credits: plan.credits },
+    const existing = await prisma.subscription.findUnique({
+      where: {
+        name: plan.name,
+      },
     });
 
-    if (existingPlan) {
-      await prisma.userSubscription.update({
-        where: { id: existingPlan.id },
-        data: plan,
+    if (existing) {
+      await prisma.subscription.update({
+        where: {
+          id: existing.id,
+        },
+        data: {
+          price: plan.price,
+          credits: plan.credits,
+        },
       });
     } else {
-      await prisma.userSubscription.create({
-        data: {
-          ...plan,
-          user: {
-            connect: { id: '1' },
-          },
-        },
+      await prisma.subscription.create({
+        data: plan,
       });
     }
   }
 
-  console.log('Subscription plans seeded');
+  console.log("Subscription plans seeded successfully");
 }
 
 main()
-  .catch(console.error)
-  .finally(() => prisma.$disconnect());
+  .catch((error) => {
+    console.error("Seed failed:", error);
+    process.exit(1);
+  })
+  .finally(async () => {
+    await prisma.$disconnect();
+  });

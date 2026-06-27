@@ -2,18 +2,17 @@ import "dotenv/config";
 import { app } from "./app.js";
 import { config } from "./config/index.js";
 import { logger } from "./config/logger.js";
-import { PrismaClient } from "@prisma/client";
-const Prisma = new PrismaClient();
+import { prisma } from "./lib/prisma.js";
+
 const { PORT } = config;
 
-// Checking prisma connection
 async function startServer() {
   try {
-    // DB connection check
-    await Prisma.$connect();
+    // Database connection check
+    await prisma.$connect();
     logger.info("Database Connected Successfully");
 
-    // Server start
+    // Start server
     app.listen(PORT, () => {
       logger.info(`Server is running on ${config.APP_URL}`);
       logger.info(`Environment: ${config.NODE_ENV}`);

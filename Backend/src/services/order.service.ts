@@ -1,10 +1,8 @@
-// Backend/src/services/order.service.ts
 import { prisma } from '../lib/prisma.js';
 import { logger } from '../config/logger.js';
 
 export const createOrder = async (userId: string, subscriptionId: string) => {
-  // 1. Subscription খুঁজে বের করো
-  const subscription = await prisma.userSubscription.findUnique({
+  const subscription = await prisma.subscription.findUnique({
     where: { id: subscriptionId },
   });
 
@@ -12,7 +10,6 @@ export const createOrder = async (userId: string, subscriptionId: string) => {
     throw new Error('Subscription plan not found');
   }
 
-  // 2. Order তৈরি করো
   const order = await prisma.order.create({
     data: {
       userId,
@@ -22,7 +19,8 @@ export const createOrder = async (userId: string, subscriptionId: string) => {
     },
   });
 
-  logger.info(`📦 Order created: ${order.id} for user ${userId}`);
+  logger.info(`Order created: ${order.id} for user ${userId}`);
+
   return order;
 };
 
@@ -31,7 +29,7 @@ export const getOrderById = async (orderId: string) => {
     where: { id: orderId },
     include: {
       user: true,
-      userSubscription: true,
+      subscription: true,
     },
   });
 };
