@@ -23,4 +23,15 @@ export const envSchema = z.object({
   CLOUDINARY_CLOUD_NAME: z.string().min(1),
   CLOUDINARY_API_KEY: z.string().min(1),
   CLOUDINARY_API_SECRET: z.string().min(1),
+
+  // SSLCommerz
+  SSL_STORE_ID: z.string().min(1),
+  SSL_STORE_PASSWORD: z.string().min(1),
+  SSL_IS_LIVE: z.coerce.boolean().default(false),
+
+  // Payment URLs
+  SSL_SUCCESS_URL: z.string().url(),
+  SSL_FAIL_URL: z.string().url(),
+  SSL_CANCEL_URL: z.string().url(),
+  SSL_IPN_URL: z.string().url(),
 });
