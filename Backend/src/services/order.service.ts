@@ -3,7 +3,7 @@ import { prisma } from '../lib/prisma.js';
 import { logger } from '../config/logger.js';
 
 export const createOrder = async (userId: string, subscriptionId: string) => {
-  // 1. Get subscription
+  // 1. Check if the Subscription exists or not
   const subscription = await prisma.subscription.findUnique({
     where: { id: subscriptionId },
   });
@@ -55,33 +55,54 @@ export const updateOrderStatus = async (
 };
 
 export const completeOrder = async (orderId: string, transactionId: string) => {
-  // 1. Update order status
-  const order = await prisma.order.update({
-    where: { id: orderId },
-    data: {
-      status: 'completed',
-      transactionId,
-    },
-    include: {
-      subscription: true,
-      user: true,
-    },
-  });
+  // Use a database transaction block so that everything succeeds together or fails together
+  return await prisma.$transaction(async (tx) => {
+    
+    // 1. Fetch current order state inside the transaction
+    const existingOrder = await tx.order.findUnique({
+      where: { id: orderId },
+      include: { subscription: true },
+    });
 
-  // 2. Update user credits
-  await prisma.userSubscription.upsert({
-    where: { userId: order.userId },
-    update: {
-      credits: { increment: order.subscription.credits },
-      subscriptionId: order.subscriptionId,
-    },
-    create: {
-      userId: order.userId,
-      subscriptionId: order.subscriptionId,
-      credits: order.subscription.credits,
-    },
-  });
+    if (!existingOrder) {
+      throw new Error(`Order ${orderId} not found`);
+    }
 
-  logger.info(`Order completed: ${orderId}, Credits added: ${order.subscription.credits}`);
-  return order;
+    // 2. IDEMPOTENCY GUARD: If order is already completed, return it immediately
+    // This stops concurrent IPN / Redirect requests from double-crediting accounts
+    if (existingOrder.status === 'completed') {
+      logger.warn(`Order ${orderId} is already completed. Skipping credit allocation.`);
+      return existingOrder;
+    }
+
+    // 3. Update order status safely using the transaction client
+    const updatedOrder = await tx.order.update({
+      where: { id: orderId },
+      data: {
+        status: 'completed',
+        transactionId,
+      },
+      include: {
+        subscription: true,
+        user: true,
+      },
+    });
+
+    // 4. Update user credits safely using the transaction client
+    await tx.userSubscription.upsert({
+      where: { userId: updatedOrder.userId },
+      update: {
+        credits: { increment: updatedOrder.subscription.credits },
+        subscriptionId: updatedOrder.subscriptionId,
+      },
+      create: {
+        userId: updatedOrder.userId,
+        subscriptionId: updatedOrder.subscriptionId,
+        credits: updatedOrder.subscription.credits,
+      },
+    });
+
+    logger.info(`Order completed securely: ${orderId}, Credits added: ${updatedOrder.subscription.credits}`);
+    return updatedOrder;
+  });
 };
