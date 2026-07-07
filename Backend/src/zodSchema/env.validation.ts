@@ -34,4 +34,7 @@ export const envSchema = z.object({
   SSL_FAIL_URL: z.string().url(),
   SSL_CANCEL_URL: z.string().url(),
   SSL_IPN_URL: z.string().url(),
+
+  // Client URL for Frontend
+  CLIENT_URL: z.string().url().default('http://localhost:3000'),
 });
