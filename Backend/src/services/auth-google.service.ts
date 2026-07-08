@@ -1,3 +1,4 @@
+// Backend/src/services/auth-google.service.ts
 import { google } from "googleapis";
 import { prisma } from "../lib/prisma.js";
 import { config } from "../config/index.js";
@@ -64,6 +65,11 @@ export const handleGoogleCallback = async (
       userSubscription: {
         create: {
           credits: 30,
+          subscription: {
+            connect: {
+              id: "free",
+            },
+          },
         },
       },
     },

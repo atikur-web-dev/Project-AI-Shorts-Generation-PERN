@@ -22,7 +22,8 @@ enum orderStatus {
 
 model User {
   id               String            @id @default(uuid())
-  googleId         String            @unique
+  googleId         String?           @unique
+  githubId         String?           @unique
   name             String
   email            String            @unique
   picture          String?

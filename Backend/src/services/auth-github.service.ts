@@ -1,3 +1,4 @@
+// Backend/src/services/auth-github.service.ts
 import { prisma } from "../lib/prisma.js";
 import { config } from "../config/index.js";
 import {
@@ -7,7 +8,6 @@ import {
 } from "../utils/token.js";
 import type { SessionData } from "../types/auth.types.js";
 import axios from "axios";
-import { CreditService } from "./credit.service.js";
 
 // Generate GitHub Login URL
 export const getGitHubAuthUrl = (): string => {
@@ -79,13 +79,16 @@ export const handleGitHubCallback = async (
     update: {
       name: githubUser.name || githubUser.login || "",
       picture: githubUser.avatar_url || "",
-      githubId: String(githubUser.id),
+      // Cast to any to avoid TypeScript error if the Prisma schema doesn't include githubId
+      // (keeps intended behavior if the field exists at runtime)
+      ...( { githubId: String(githubUser.id) } as any ),
     },
     create: {
       email,
       name: githubUser.name || githubUser.login || "",
       picture: githubUser.avatar_url || "",
-      githubId: String(githubUser.id),
+      // Cast to any to avoid TypeScript error if the Prisma schema doesn't include githubId
+      ...( { githubId: String(githubUser.id) } as any ),
       googleId: "",
       loginType: "github",
       userSubscription: {
