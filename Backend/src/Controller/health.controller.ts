@@ -2,6 +2,7 @@
 import type { Request, Response } from "express";
 import { prisma } from "../lib/prisma.js";
 import { config } from "../config/index.js";
+import { logger } from "../config/logger.js";
 
 export const healthCheck = async (req: Request, res: Response) => {
   try {

@@ -1,42 +1,27 @@
-// src/config/logger.ts
+import winston from 'winston';
+import { config } from './index.js';
 
-import winston from "winston";
-import { env } from "./env.js";
+const { combine, timestamp, printf, colorize, json, errors } = winston.format;
 
-const { combine, timestamp, printf, colorize, json } = winston.format;
-
-// Custom format
 const myFormat = combine(
-  timestamp({ format: "YYYY-MM-DD HH:mm:ss" }),
-
-  env.NODE_ENV === "production"
+  errors({ stack: true }),
+  timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
+  config.NODE_ENV === 'production'
     ? json()
-    : combine(
-        colorize(),
-        printf(({ level, message, timestamp }) => {
-          return `${timestamp} ${level}: ${message}`;
-        }),
-      ),
+    : combine(colorize(), printf(({ timestamp, level, message, stack }) => {
+        return `${timestamp} ${level}: ${message}${stack ? `\n${stack}` : ''}`;
+      }))
 );
 
-// Transport configuration
-const transports =
-  env.NODE_ENV === "production"
-    ? [
-        new winston.transports.File({
-          filename: "logs/error.log",
-          level: "error",
-        }),
+const transports = config.NODE_ENV === 'production'
+  ? [
+      new winston.transports.File({ filename: 'logs/error.log', level: 'error' }),
+      new winston.transports.File({ filename: 'logs/combined.log' }),
+    ]
+  : [new winston.transports.Console()];
 
-        new winston.transports.File({
-          filename: "logs/combined.log",
-        }),
-      ]
-    : [new winston.transports.Console()];
-
-// Logger instance
 export const logger = winston.createLogger({
-  level: env.NODE_ENV === "production" ? "info" : "debug",
+  level: config.NODE_ENV === 'production' ? 'info' : 'debug',
   format: myFormat,
   transports,
 });
