@@ -1,18 +1,14 @@
-import Express, { type Application, type NextFunction, type Request, type Response } from "express";
 import cors from "cors";
 import helmet from "helmet";
-import cookieParser from "cookie-parser";
 import morgan from "morgan";
-import { logger } from "./config/logger.js";
+import cookieParser from "cookie-parser";
 import { config } from "./config/index.js";
 import { authRouter } from './routes/auth.route.js';
-import { projectRouter } from './routes/project.route.js';
-import { apiLimiter, aiLimiter, authLimiter } from './middleware/rateLimiter.js';
-import { errorHandler } from './middleware/error.middleware.js';
 import { orderRouter } from "./routes/order.route.js";
-
-
-
+import { projectRouter } from './routes/project.route.js';
+import { errorHandler } from './middleware/error.middleware.js';
+import { apiLimiter, aiLimiter, authLimiter } from './middleware/rateLimiter.js';
+import Express, { type Application, type Request, type Response } from "express";
 
 const app: Application = Express();
 
@@ -36,6 +32,7 @@ app.get("/health", (req: Request, res: Response) => {
     })
 })
 
+// Routes & Rate Limiters
 app.use('/api/v1', authRouter);
 app.use('/api/v1', projectRouter);
 app.use('/api', apiLimiter);
@@ -43,24 +40,13 @@ app.use('/api/v1/auth', authLimiter);
 app.use('/api/v1/projects', aiLimiter);
 app.use('/api/v1', orderRouter);
 
-// 404 error handler
 app.use((req: Request, res: Response) => {
-    res.status(400).json({
+    res.status(404).json({
         success: false,
         message: `Route not found: ${req.method} ${req.originalUrl}`
     })
 })
 
-// Global Error handler
-app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
-    logger.error(err.stack || err.message);
-    res.status(500).json({
-        success: false,
-        message: config.NODE_ENV === "development" ? err.message : "Internal Server error"
-    })
-})
-
-// error handler
 app.use(errorHandler);
 
-export {app};
+export { app };
