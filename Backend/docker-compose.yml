@@ -1,35 +1,35 @@
 version: '3.8'
 
 services:
-  # ===== PostgreSQL =====
   postgres:
     image: postgres:16-alpine
     container_name: ai-short-postgres
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: aishortspassword123
-      POSTGRES_DB: ai_short
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-aishortspassword123}
+      POSTGRES_DB: ${DB_NAME:-ai_short}
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     networks:
       - ai-short-network
+    restart: unless-stopped
 
-  # ===== Backend  =====
   backend:
-    image: node:22-alpine
+    build:
+      context: .
+      dockerfile: Dockerfile
     container_name: ai-short-backend
-    working_dir: /app
-    volumes:
-      - .:/app
-      - /app/node_modules
-    ports:
-      - "8000:8000"
     environment:
-      NODE_ENV: development
-      PORT: 8000
-      DATABASE_URL: postgresql://postgres:aishortspassword123@postgres:5432/ai_short
+      NODE_ENV: ${NODE_ENV:-production}
+      PORT: ${PORT:-8000}
+      DATABASE_URL: postgresql://postgres:${DB_PASSWORD:-aishortspassword123}@postgres:5432/${DB_NAME:-ai_short}
       JWT_SECRET: ${JWT_SECRET}
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
@@ -41,15 +41,29 @@ services:
       CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME}
       CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY}
       CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET}
-      MOCK_AI_MODE: ${MOCK_AI_MODE:-true}
+      SSL_STORE_ID: ${SSL_STORE_ID}
+      SSL_STORE_PASSWORD: ${SSL_STORE_PASSWORD}
+      SSL_IS_LIVE: ${SSL_IS_LIVE:-false}
+      CLIENT_URL: ${CLIENT_URL:-http://localhost:3000}
+      MOCK_AI_MODE: ${MOCK_AI_MODE:-false}
+    ports:
+      - "${PORT:-8000}:8000"
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./logs:/app/logs
+      - ./temp:/app/temp
+      - ./videos:/app/videos
     networks:
       - ai-short-network
-    command: sh -c "npm install && npx prisma generate && npx prisma migrate deploy && npm run dev"
+    restart: unless-stopped
 
 volumes:
   postgres_data:
+    name: ai-short-postgres-data
 
 networks:
   ai-short-network:
+    name: ai-short-network
+    driver: bridge
