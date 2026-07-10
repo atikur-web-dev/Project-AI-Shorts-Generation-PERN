@@ -20,6 +20,11 @@ enum orderStatus {
   failed
 }
 
+enum Role {
+  USER 
+  ADMIN
+}
+
 model User {
   id               String            @id @default(uuid())
   googleId         String?           @unique
@@ -27,6 +32,7 @@ model User {
   name             String
   email            String            @unique
   picture          String?
+  role             Role              @default(USER)
   loginType        loginType         @default(google)
   createdAt        DateTime          @default(now())
   updatedAt        DateTime          @updatedAt
