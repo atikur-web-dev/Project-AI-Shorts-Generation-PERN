@@ -3,7 +3,7 @@ import type { Request, Response, NextFunction } from 'express';
 import { logger } from '../config/logger.js';
 import { config } from '../config/index.js';
 import { ZodError } from 'zod';
-import { Prisma } from '@prisma/client';
+import { Prisma } from "../generated/prisma/client.js";
 
 export const errorHandler = (
   err: any,
@@ -20,7 +20,7 @@ export const errorHandler = (
     ip: req.ip,
   });
 
-  // ২. Zod validation error hand
+  // 2. Zod validation error hand
   if (err instanceof ZodError) {
     return res.status(400).json({
       success: false,
@@ -32,7 +32,7 @@ export const errorHandler = (
     });
   }
 
-  // ৩. Prisma ডাটাবেজ এরর হ্যান্ডলিং
+  // 3. Prisma DB error handling
   if (err instanceof Prisma.PrismaClientKnownRequestError) {
     if (err.code === 'P2002') {
       return res.status(409).json({
@@ -48,7 +48,7 @@ export const errorHandler = (
     }
   }
 
-  // ৪. Multer ফাইল সাইজ এরর হ্যান্ডলিং
+  // 4. Multer file size handling
   if (err.code === 'LIMIT_FILE_SIZE') {
     return res.status(400).json({
       success: false,
@@ -56,7 +56,7 @@ export const errorHandler = (
     });
   }
 
-  // ৫. JWT টোকেন এরর হ্যান্ডলিং
+  // 5. JWT token error handling
   if (err.name === 'JsonWebTokenError') {
     return res.status(401).json({
       success: false,
@@ -71,7 +71,7 @@ export const errorHandler = (
     });
   }
 
-  // ৬. ডিফল্ট বা অন্যান্য অজানা এরর হ্যান্ডলিং
+  // 6. default error handling 
   const statusCode = err.statusCode || 500;
   return res.status(statusCode).json({
     success: false,

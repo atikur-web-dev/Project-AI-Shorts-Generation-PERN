@@ -7,10 +7,7 @@ import {
 import { setRefreshTokenCookie } from "../utils/cookies.js";
 import { logger } from "../config/logger.js";
 
-/**
- * GITHUB LOGIN - Redirect to GitHub OAuth Page
- * This runs when the user clicks "Login with GitHub" button
- */
+
 export const githubLogin = async (req: Request, res: Response): Promise<any> => {
   try {
     const url = getGitHubAuthUrl();
@@ -21,10 +18,6 @@ export const githubLogin = async (req: Request, res: Response): Promise<any> => 
   }
 };
 
-/**
- * GITHUB CALLBACK - Handle GitHub's Redirect After Authentication
- * GitHub sends the user back here with a temporary authorization code
- */
 export const githubCallback = async (req: Request, res: Response): Promise<any> => {
   try {
     const { code } = req.query;

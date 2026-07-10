@@ -14,10 +14,6 @@ import { logger } from "../config/logger.js";
 export { googleLogin, googleCallback } from "./auth-google.controller.js";
 export { githubLogin, githubCallback } from "./auth-github.controller.js";
 
-/**
- * LOGOUT - Terminate User Session
- * Destroys the session in database and clears browser cookies
- */
 export const logout = async (req: Request, res: Response): Promise<any> => {
   try {
     const refreshToken = req.cookies.refreshToken;
@@ -34,10 +30,6 @@ export const logout = async (req: Request, res: Response): Promise<any> => {
   }
 };
 
-/**
- * REFRESH TOKEN - Generate New Access Token
- * Runs when short-term Access Token expires, uses 7-day Refresh Token
- */
 export const refreshToken = async (req: Request, res: Response): Promise<any> => {
   try {
     const oldRefreshToken = req.cookies.refreshToken;
@@ -67,10 +59,7 @@ export const refreshToken = async (req: Request, res: Response): Promise<any> =>
   }
 };
 
-/**
- * GET CURRENT USER PROFILE - Protected Route
- * Returns authenticated user's profile data
- */
+
 export const getMe = async (req: Request, res: Response): Promise<any> => {
   try {
     const userId = req.user?.id;

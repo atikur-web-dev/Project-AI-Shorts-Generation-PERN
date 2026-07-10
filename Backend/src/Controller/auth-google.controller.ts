@@ -7,10 +7,6 @@ import {
 import { setRefreshTokenCookie } from "../utils/cookies.js";
 import { logger } from "../config/logger.js";
 
-/**
- * GOOGLE LOGIN - Redirect to Google OAuth Page
- * This runs when the user clicks "Login with Google" button
- */
 export const googleLogin = async (req: Request, res: Response): Promise<any> => {
   try {
     const url = getGoogleAuthUrl();
@@ -21,10 +17,7 @@ export const googleLogin = async (req: Request, res: Response): Promise<any> => 
   }
 };
 
-/**
- * GOOGLE CALLBACK - Handle Google's Redirect After Authentication
- * Google sends the user back here with a temporary authorization code
- */
+
 export const googleCallback = async (req: Request, res: Response): Promise<any> => {
   try {
     const { code } = req.query;

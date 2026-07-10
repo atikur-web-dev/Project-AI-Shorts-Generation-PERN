@@ -2,10 +2,7 @@
 import { cloudinary } from '../lib/cloudinary.js';
 import { logger } from '../config/logger.js';
 
-/**
- * 1. UPLOAD FILE VIA FILE PATH (For locally saved temp files)
- * Automatically detects whether the file is an Image or a Video.
- */
+
 export const uploadToCloudinary = async (
   filePath: string,
   folder: string = 'ai-shorts'
@@ -25,10 +22,6 @@ export const uploadToCloudinary = async (
   }
 };
 
-/**
- * 2. UPLOAD FILE VIA BUFFER STREAM (For live AI-generated memory files)
- * Processes raw memory buffers and streams them directly to the cloud.
- */
 export const uploadBufferToCloudinary = async (
   buffer: Buffer,
   folder: string = 'ai-shorts'
