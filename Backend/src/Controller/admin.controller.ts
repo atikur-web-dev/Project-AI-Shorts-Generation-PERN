@@ -1,4 +1,4 @@
-// Backend/src/middleware/admin.controller.ts
+// Backend/src/controller/admin.controller.ts
 import type { Request, Response } from "express";
 import { prisma } from "../lib/prisma.js";
 import { logger } from "../config/logger.js";
