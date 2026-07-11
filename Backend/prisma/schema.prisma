@@ -7,7 +7,6 @@ datasource db {
   provider = "postgresql"
 }
 
-
 enum loginType {
   google
   github
@@ -37,11 +36,12 @@ model User {
   createdAt        DateTime          @default(now())
   updatedAt        DateTime          @updatedAt
 
-  // Relations
+ 
   sessions         Session[]
   projects         Project[]
   userSubscription UserSubscription?
   orders           Order[]
+  adminLogs        AdminLog[]
 
   @@map("users")
 }
@@ -53,7 +53,7 @@ model Session {
   expiresAt    DateTime
   createdAt    DateTime @default(now())
 
-  // Relations
+  
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
@@ -75,7 +75,7 @@ model Project {
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
 
-  // Relations
+
   userId             String
   user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -91,7 +91,7 @@ model Subscription {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  // Relations
+  
   userSubscriptions UserSubscription[]
   orders            Order[]
 
@@ -106,7 +106,7 @@ model UserSubscription {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
-  // Relations
+  
   user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   subscription   Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
 
@@ -123,11 +123,26 @@ model Order {
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
 
-  // Relations
+  
   user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   subscription   Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([status])
   @@map("orders")
+}
+
+model AdminLog {
+  id        String   @id @default(uuid())
+  adminId   String
+  action    String   
+  targetId  String?  
+  details   Json?   
+  createdAt DateTime @default(now())
+
+  admin     User     @relation(fields: [adminId], references: [id], onDelete: Cascade)
+
+  @@index([adminId])
+  @@index([createdAt])
+  @@map("admin_logs")
 }
