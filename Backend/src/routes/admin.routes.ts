@@ -2,14 +2,19 @@
 import { Router } from "express";
 import {
   getDashboardStats,
-  getAllOrders,
+  getAllUsers,
   updateUserRole,
   deleteUser,
-  getAllUsers,
+  getAllOrders,
   updateOrderStatus,
+  getRevenueReport,          
+  getUserActivityReport,     
+  getProjectAnalytics,       
+  exportReport,              
+  getTimeSeriesStats,
   getAdminLogs,
-  searchUsers
-} from "../controller/admin.controller.js";
+  searchUsers,
+} from '../controller/admin.controller.js';
 import { authenticate } from "../middleware/auth.middleware.js";
 import { isAdmin } from "../middleware/admin.middleware.js";
 
@@ -33,5 +38,12 @@ router.patch("/admin/orders/:orderId/status", updateOrderStatus);
 
 // admin logs
 router.get('/admin/logs', getAdminLogs);
+
+// ============ Reports ============
+router.get('/admin/reports/revenue', getRevenueReport);
+router.get('/admin/reports/users', getUserActivityReport);
+router.get('/admin/reports/projects', getProjectAnalytics);
+router.get('/admin/reports/export', exportReport);
+
 
 export const adminRouter = router;

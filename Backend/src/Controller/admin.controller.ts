@@ -363,3 +363,313 @@ export const searchUsers = async (req: Request, res: Response) => {
     res.status(500).json({ success: false, message: 'Search failed' });
   }
 };
+
+// Revenue Report
+export const getRevenueReport = async (req: Request, res: Response) => {
+  try {
+    const { period = 'monthly' } = req.query as { period?: string };
+
+    let dateTrunc: string;
+    if (period === 'daily') dateTrunc = 'day';
+    else if (period === 'weekly') dateTrunc = 'week';
+    else if (period === 'yearly') dateTrunc = 'year';
+    else dateTrunc = 'month';
+
+    // Safe Dynamic Identifier mapping to prevent Prisma query breakdown
+    const safeTrunc = Prisma.raw(`'${dateTrunc}'`);
+
+    // Raw SQL – Revenue by period
+    const revenueData = await prisma.$queryRaw`
+      SELECT 
+        DATE_TRUNC(${safeTrunc}, "createdAt") as period,
+        COUNT(*)::int as order_count,
+        COALESCE(SUM(amount), 0)::float as total_revenue,
+        COALESCE(AVG(amount), 0)::float as avg_order_value
+      FROM "orders"
+      WHERE status = 'completed'
+      GROUP BY DATE_TRUNC(${safeTrunc}, "createdAt")
+      ORDER BY period DESC
+      LIMIT 12
+    `;
+
+    // Total summary
+    const summary = await prisma.$queryRaw<any[]>`
+      SELECT 
+        COUNT(*)::int as total_orders,
+        COALESCE(SUM(amount), 0)::float as total_revenue,
+        COALESCE(AVG(amount), 0)::float as avg_order_value,
+        COALESCE(MAX(amount), 0)::float as max_order_value,
+        COALESCE(MIN(amount), 0)::float as min_order_value
+      FROM "orders"
+      WHERE status = 'completed'
+    `;
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        summary: summary[0] || {
+          total_orders: 0,
+          total_revenue: 0,
+          avg_order_value: 0,
+          max_order_value: 0,
+          min_order_value: 0
+        },
+        revenueData,
+        period,
+      },
+    });
+  } catch (error) {
+    logger.error('Revenue report error:', error);
+    return res.status(500).json({ success: false, message: 'Failed to generate revenue report' });
+  }
+};
+
+// User Activity report
+export const getUserActivityReport = async (req: Request, res: Response) => {
+  try {
+    // 1. Top users by project count (Fixed Cartesian product multiplier and typecasting)
+    const topUsersByProjects = await prisma.$queryRaw`
+      SELECT 
+        u.id,
+        u.name,
+        u.email,
+        COUNT(DISTINCT p.id)::int as project_count,
+        COUNT(DISTINCT o.id)::int as order_count,
+        COALESCE(SUM(DISTINCT o.amount), 0)::float as total_spent
+      FROM "users" u
+      LEFT JOIN "projects" p ON p."userId" = u.id
+      LEFT JOIN "orders" o ON o."userId" = u.id AND o.status = 'completed'
+      GROUP BY u.id, u.name, u.email
+      ORDER BY project_count DESC
+      LIMIT 10
+    `;
+
+    // 2. Active users (last 30 days) (Fixed typecasting for JSON serialization)
+    const activeUsers = await prisma.$queryRaw<any[]>`
+      SELECT 
+        COUNT(DISTINCT u.id)::int as active_users,
+        COUNT(DISTINCT p.id)::int as projects_created,
+        COUNT(DISTINCT o.id)::int as orders_placed
+      FROM "users" u
+      LEFT JOIN "projects" p ON p."userId" = u.id AND p."createdAt" >= NOW() - INTERVAL '30 days'
+      LEFT JOIN "orders" o ON o."userId" = u.id AND o."createdAt" >= NOW() - INTERVAL '30 days'
+    `;
+
+    // 3. User growth (last 7 days) (Fixed BigInt conversion)
+    const userGrowth = await prisma.$queryRaw`
+      SELECT 
+        DATE_TRUNC('day', "createdAt") as date,
+        COUNT(*)::int as new_users
+      FROM "users"
+      WHERE "createdAt" >= NOW() - INTERVAL '7 days'
+      GROUP BY DATE_TRUNC('day', "createdAt")
+      ORDER BY date DESC
+    `;
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        topUsersByProjects,
+        activeUsers: activeUsers[0] || { active_users: 0, projects_created: 0, orders_placed: 0 },
+        userGrowth,
+      },
+    });
+  } catch (error) {
+    logger.error('User activity report error:', error);
+    return res.status(500).json({ success: false, message: 'Failed to generate user activity report' });
+  }
+};
+
+// Project Analytics
+export const getProjectAnalytics = async (req: Request, res: Response) => {
+  try {
+    // Total projects by status (Fixed BigInt casting & NULL/Empty string edge cases)
+    const projectStats = await prisma.$queryRaw<any[]>`
+      SELECT 
+        COUNT(*)::int as total_projects,
+        COUNT(CASE WHEN "generatedImage" IS NOT NULL AND "generatedImage" != '' THEN 1 END)::int as with_image,
+        COUNT(CASE WHEN "generatedVideo" IS NOT NULL AND "generatedVideo" != '' THEN 1 END)::int as with_video,
+        COUNT(CASE WHEN "generatedImage" IS NULL OR "generatedImage" = '' THEN 1 END)::int as without_image,
+        COUNT(CASE WHEN ("generatedVideo" IS NULL OR "generatedVideo" = '') AND ("generatedImage" IS NOT NULL AND "generatedImage" != '') THEN 1 END)::int as image_only
+      FROM "projects"
+    `;
+
+    // Most popular aspect ratios (Fixed BigInt casting for JSON conversion)
+    const aspectRatios = await prisma.$queryRaw`
+      SELECT 
+        "aspectRatio",
+        COUNT(*)::int as count
+      FROM "projects"
+      GROUP BY "aspectRatio"
+      ORDER BY count DESC
+    `;
+
+    // Projects per day (last 30 days) (Fixed BigInt casting)
+    const projectsTrend = await prisma.$queryRaw`
+      SELECT 
+        DATE_TRUNC('day', "createdAt") as date,
+        COUNT(*)::int as project_count
+      FROM "projects"
+      WHERE "createdAt" >= NOW() - INTERVAL '30 days'
+      GROUP BY DATE_TRUNC('day', "createdAt")
+      ORDER BY date DESC
+    `;
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        projectStats: projectStats || {
+          total_projects: 0,
+          with_image: 0,
+          with_video: 0,
+          without_image: 0,
+          image_only: 0
+        },
+        aspectRatios,
+        projectsTrend,
+      },
+    });
+  } catch (error) {
+    logger.error('Project analytics error:', error);
+    return res.status(500).json({ success: false, message: 'Failed to generate project analytics' });
+  }
+};
+
+// Export Report (CSV) 
+export const exportReport = async (req: Request, res: Response) => {
+  try {
+    const { type = 'users' } = req.query as { type?: string };
+
+    let data: any[] = [];
+    let headers: string[] = [];
+
+    if (type === 'users') {
+      data = await prisma.$queryRaw`
+        SELECT 
+          id, name, email, role, "loginType", 
+          "createdAt", 
+          (SELECT COUNT(*)::int FROM "projects" p WHERE p."userId" = u.id) as project_count,
+          (SELECT COUNT(*)::int FROM "orders" o WHERE o."userId" = u.id) as order_count
+        FROM "users" u
+        ORDER BY "createdAt" DESC
+      `;
+      headers = ['ID', 'Name', 'Email', 'Role', 'Login Type', 'Created At', 'Projects', 'Orders'];
+    } else if (type === 'orders') {
+      data = await prisma.$queryRaw`
+        SELECT 
+          o.id, o.amount::float, o.status, o."createdAt",
+          u.name as user_name, u.email as user_email,
+          s.name as plan_name
+        FROM "orders" o
+        JOIN "users" u ON u.id = o."userId"
+        JOIN "subscriptions" s ON s.id = o."subscriptionId"
+        ORDER BY o."createdAt" DESC
+      `;
+      headers = ['Order ID', 'Amount', 'Status', 'Created At', 'User', 'Email', 'Plan'];
+    } else if (type === 'projects') {
+      data = await prisma.$queryRaw`
+        SELECT 
+          p.id, p."projectName", p."productName", 
+          CASE WHEN p."generatedImage" IS NOT NULL AND p."generatedImage" != '' THEN 'Yes' ELSE 'No' END as has_image,
+          CASE WHEN p."generatedVideo" IS NOT NULL AND p."generatedVideo" != '' THEN 'Yes' ELSE 'No' END as has_video,
+          p."aspectRatio", p."createdAt",
+          u.name as user_name
+        FROM "projects" p
+        JOIN "users" u ON u.id = p."userId"
+        ORDER BY p."createdAt" DESC
+      `;
+      headers = ['Project ID', 'Name', 'Product', 'Has Image', 'Has Video', 'Aspect Ratio', 'Created At', 'User'];
+    }
+
+    // 1. Safe CSV Data Parsing (RFC 4180 Compliant - Prevents broken layout from commas or quotes)
+    const escapeCSV = (val: any): string => {
+      if (val === null || val === undefined) return '';
+      let str = typeof val === 'object' ? JSON.stringify(val) : String(val);
+      str = str.replace(/"/g, '""');
+      if (str.includes(',') || str.includes('"') || str.includes('\n') || str.includes('\r')) {
+        str = `"${str}"`;
+      }
+      return str;
+    };
+
+    // 2. Build CSV with precise ordering mapping instead of raw Object.values()
+    let csv = headers.join(',') + '\n';
+    
+    data.forEach(row => {
+      const rowValues = Object.keys(row).map(key => escapeCSV(row[key]));
+      csv += rowValues.join(',') + '\n';
+    });
+
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', `attachment; filename=${type}_report_${Date.now()}.csv`);
+    return res.status(200).send(csv);
+
+  } catch (error) {
+    logger.error('Export report error:', error);
+    return res.status(500).json({ success: false, message: 'Failed to export report' });
+  }
+};
+
+// Dashboard Summary (All-in-One)
+export const getDashboardSummary = async (req: Request, res: Response) => {
+  try {
+    // 1. Basic stats (Fixed BigInt casting to prevent server crash & NULL string safety)
+    const stats = await prisma.$queryRaw<any[]>`
+      SELECT 
+        (SELECT COUNT(*)::int FROM "users") as total_users,
+        (SELECT COUNT(*)::int FROM "orders") as total_orders,
+        (SELECT COUNT(*)::int FROM "orders" WHERE status = 'completed') as completed_orders,
+        (SELECT COALESCE(SUM(amount), 0)::float FROM "orders" WHERE status = 'completed') as total_revenue,
+        (SELECT COUNT(*)::int FROM "projects") as total_projects,
+        (SELECT COUNT(*)::int FROM "projects" WHERE "generatedImage" IS NOT NULL AND "generatedImage" != '') as generated_images,
+        (SELECT COUNT(*)::int FROM "projects" WHERE "generatedVideo" IS NOT NULL AND "generatedVideo" != '') as generated_videos
+    `;
+
+    // 2. Today's stats (Fixed Index-friendly date ranges to avoid full table scans)
+    const today = await prisma.$queryRaw<any[]>`
+      SELECT 
+        (SELECT COUNT(*)::int FROM "users" WHERE "createdAt" >= CURRENT_DATE) as new_users_today,
+        (SELECT COUNT(*)::int FROM "orders" WHERE "createdAt" >= CURRENT_DATE) as orders_today,
+        (SELECT COALESCE(SUM(amount), 0)::float FROM "orders" WHERE "createdAt" >= CURRENT_DATE AND status = 'completed') as revenue_today
+    `;
+
+    // 3. Recent activity (Fixed UNION ALL implicit casting errors for UUID/Int mixed types)
+    const recentActivity = await prisma.$queryRaw`
+      (SELECT 'user' as type, id::text, name as title, "createdAt" 
+       FROM "users" 
+       ORDER BY "createdAt" DESC 
+       LIMIT 5)
+      UNION ALL
+      (SELECT 'order' as type, id::text, CONCAT('Order #', id::text) as title, "createdAt" 
+       FROM "orders" 
+       ORDER BY "createdAt" DESC 
+       LIMIT 5)
+      ORDER BY "createdAt" DESC
+      LIMIT 10
+    `;
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        stats: stats[0] || {
+          total_users: 0,
+          total_orders: 0,
+          completed_orders: 0,
+          total_revenue: 0,
+          total_projects: 0,
+          generated_images: 0,
+          generated_videos: 0
+        },
+        today: today[0] || {
+          new_users_today: 0,
+          orders_today: 0,
+          revenue_today: 0
+        },
+        recentActivity,
+      },
+    });
+  } catch (error) {
+    logger.error('Dashboard summary error:', error);
+    return res.status(500).json({ success: false, message: 'Failed to get dashboard summary' });
+  }
+};
