@@ -12,6 +12,7 @@ import {
   getProjectAnalytics,       
   exportReport,              
   getTimeSeriesStats,
+  getDashboardSummary,
   getAdminLogs,
   searchUsers,
 } from '../controller/admin.controller.js';
@@ -44,6 +45,7 @@ router.get('/admin/reports/revenue', getRevenueReport);
 router.get('/admin/reports/users', getUserActivityReport);
 router.get('/admin/reports/projects', getProjectAnalytics);
 router.get('/admin/reports/export', exportReport);
+router.get('/admin/dashboard', getDashboardSummary);
 
 
 export const adminRouter = router;
