@@ -42,8 +42,13 @@ model User {
   userSubscription UserSubscription?
   orders           Order[]
   adminLogs        AdminLog[]
+  searchHistory    SearchHistory[]
 
   @@map("users")
+
+  @@index([email])
+  @@index([role])
+  @@index([createdAt])
 }
 
 model Session {
@@ -80,7 +85,7 @@ model Project {
   user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
-  @@map("projects")
+  @@index([createdAt])
 }
 
 model Subscription {
@@ -127,9 +132,12 @@ model Order {
   user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   subscription   Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
 
+  @@map("orders")
+
   @@index([userId])
   @@index([status])
-  @@map("orders")
+  @@index([createdAt])
+  @@index([transactionId])
 }
 
 model AdminLog {
@@ -145,4 +153,19 @@ model AdminLog {
   @@index([adminId])
   @@index([createdAt])
   @@map("admin_logs")
+}
+
+model SearchHistory {
+  id        String   @id @default(uuid())
+  userId    String
+  query     String
+  type      String   
+  filters   Json?
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([createdAt])
+  @@map("search_history")
 }

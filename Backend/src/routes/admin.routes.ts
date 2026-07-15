@@ -12,6 +12,7 @@ import {
   getProjectAnalytics,       
   exportReport,              
   getTimeSeriesStats,
+  getUsersCursor,
   getDashboardSummary,
   getAdminLogs,
   searchUsers,
@@ -46,6 +47,7 @@ router.get('/admin/reports/users', getUserActivityReport);
 router.get('/admin/reports/projects', getProjectAnalytics);
 router.get('/admin/reports/export', exportReport);
 router.get('/admin/dashboard', getDashboardSummary);
+router.get('/admin/users/cursor', getUsersCursor);
 
 
 export const adminRouter = router;

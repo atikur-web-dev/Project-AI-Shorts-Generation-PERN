@@ -1,6 +1,7 @@
 version: '3.8'
 
 services:
+  # PostgreSQL
   postgres:
     image: postgres:16-alpine
     container_name: ai-short-postgres
@@ -21,6 +22,19 @@ services:
       - ai-short-network
     restart: unless-stopped
 
+  # Redis
+  redis:
+    image: redis:7-alpine
+    container_name: ai-short-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - ai-short-network
+    restart: unless-stopped
+
+  # Backend 
   backend:
     build:
       context: .
@@ -30,6 +44,7 @@ services:
       NODE_ENV: ${NODE_ENV:-production}
       PORT: ${PORT:-8000}
       DATABASE_URL: postgresql://postgres:${DB_PASSWORD:-aishortspassword123}@postgres:5432/${DB_NAME:-ai_short}
+      REDIS_URL: redis://redis:6379
       JWT_SECRET: ${JWT_SECRET}
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
@@ -51,6 +66,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      redis:
+        condition: service_started
     volumes:
       - ./logs:/app/logs
       - ./temp:/app/temp
@@ -62,6 +79,8 @@ services:
 volumes:
   postgres_data:
     name: ai-short-postgres-data
+  redis_data:
+    name: ai-short-redis-data
 
 networks:
   ai-short-network:

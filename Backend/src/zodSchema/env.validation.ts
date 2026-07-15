@@ -36,5 +36,8 @@ export const envSchema = z.object({
   SSL_IPN_URL: z.string().url(),
 
   // Client URL for Frontend
-  CLIENT_URL: z.string().url().default('http://localhost:3000'),
+  CLIENT_URL: z.string().url().default("http://localhost:3000"),
+
+  REDIS_URL: z.string().url().default("redis://localhost:6379"),
+  CACHE_TTL: z.coerce.number().default(300),
 });

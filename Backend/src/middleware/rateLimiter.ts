@@ -1,34 +1,62 @@
-import rateLimit from "express-rate-limit";
-import { config } from "../config/index.js";
+import type { Request, Response, NextFunction } from 'express';
+import { redisClient } from '../lib/redis.js';
+
+interface RateLimitOptions {
+  windowMs: number;
+  max: number;
+  message?: string;
+}
+
+// Custom Redis-based rate limiter middleware creator
+export const redisRateLimiter = (options: RateLimitOptions) => {
+  return async (req: Request, res: Response, next: NextFunction) => {
+    const ip = req.ip || req.socket.remoteAddress || 'unknown';
+    const key = `rate_limit:${ip}:${req.path}`;
+
+    try {
+      const current = await redisClient.incr(key);
+
+      if (current === 1) {
+        await redisClient.expire(key, Math.ceil(options.windowMs / 1000));
+      }
+
+      if (current > options.max) {
+        return res.status(429).json({
+          success: false,
+          message: options.message || 'Too many requests, please try again later.',
+        });
+      }
+
+      // Add rate limit headers
+      res.setHeader('X-RateLimit-Limit', options.max);
+      res.setHeader('X-RateLimit-Remaining', Math.max(0, options.max - current));
+
+      next();
+    } catch (error) {
+      // If Redis fails, allow the request (fail open)
+      console.error('Rate limiter error:', error);
+      next();
+    }
+  };
+};
 
 // General API limiter
-export const apiLimiter = rateLimit({
+export const apiLimiter = redisRateLimiter({
   windowMs: 15 * 60 * 1000,
   max: 100,
-  message: {
-    success: false,
-    message: "Too many requests from this IP, Please try again later",
-  },
-  standardHeaders: true,
-  legacyHeaders: false,
+  message: "Too many requests from this IP, Please try again later",
 });
 
-// strict limiter for AI endpoints
-export const aiLimiter = rateLimit({
+// Strict limiter for AI endpoints
+export const aiLimiter = redisRateLimiter({
   windowMs: 60 * 60 * 1000, 
   max: 10,
-  message: {
-    success: false,
-    message: "AI Generation Limit reached, Please Try again after 1 hrs",
-  },
+  message: "AI Generation Limit reached, Please Try again after 1 hrs",
 });
 
-// for authentication or login , so that hackers cannot retry it again and again
-export const authLimiter = rateLimit({
+// For authentication or login, so that hackers cannot retry it again and again
+export const authLimiter = redisRateLimiter({
   windowMs: 15 * 60 * 1000, 
   max: 20,
-  message: {
-    success: false,
-    message: "Too many authentication attempt, please try again later",
-  },
+  message: "Too many authentication attempt, please try again later",
 });

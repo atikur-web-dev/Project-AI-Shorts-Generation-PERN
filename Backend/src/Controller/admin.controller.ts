@@ -4,46 +4,65 @@ import { Prisma } from "../generated/prisma/client.js";
 import { prisma } from "../lib/prisma.js";
 import { logger } from "../config/logger.js";
 import { createAdminLog } from "../services/adminLog.service.js";
+import {
+  saveSearchHistory,
+  getSearchHistory,
+  clearSearchHistory,
+} from "../services/searchHistory.service.js";
+import { CacheService } from '../services/cache.service.js';
+import type { ParsedQs } from "qs";
 
-// Get Dashboard Statistics and its for Admin only and its private
+
+// Get Dashboard Statistics (Admin only, private)
 export const getDashboardStats = async (req: Request, res: Response) => {
   try {
-    const [totalUsers, totalOrders, totalRevenue, totalProjects, recentOrders] =
-      await Promise.all([
-        prisma.user.count(),
-        prisma.order.count(),
-        prisma.order.aggregate({
-          _sum: { amount: true },
-          where: { status: "completed" },
-        }),
-        prisma.project.count(),
-        prisma.order.findMany({
-          take: 5,
-          orderBy: { createdAt: "desc" },
-          include: {
-            user: { select: { name: true, email: true } },
-            subscription: { select: { name: true } },
-          },
-        }),
-      ]);
-
-    return res.status(200).json({
-      success: true,
-      data: {
-        totalUsers,
-        totalOrders,
-        totalRevenue: totalRevenue._sum.amount || 0,
-        totalProjects,
-        recentOrders,
-      },
+    const cacheKey = CacheService.generateKey('dashboard:stats', {
+      user: req.user?.id,
     });
+
+    // Try cache first
+    const cached = await CacheService.get(cacheKey);
+    if (cached) {
+      return res.status(200).json({ success: true, data: cached, cached: true });
+    }
+
+    // Fetch fresh data
+    const [totalUsers, totalOrders, totalRevenue, totalProjects, recentOrders] = await Promise.all([
+      prisma.user.count(),
+      prisma.order.count(),
+      prisma.order.aggregate({
+        _sum: { amount: true },
+        where: { status: 'completed' },
+      }),
+      prisma.project.count(),
+      prisma.order.findMany({
+        take: 5,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          user: { select: { name: true, email: true } },
+          subscription: { select: { name: true } },
+        },
+      }),
+    ]);
+
+    const data = {
+      totalUsers,
+      totalOrders,
+      totalRevenue: totalRevenue._sum.amount || 0,
+      totalProjects,
+      recentOrders,
+    };
+
+    // Cache for 5 minutes
+    await CacheService.set(cacheKey, data, 300);
+
+    return res.status(200).json({ success: true, data, cached: false });
   } catch (error) {
-    logger.error("Dashboard stats error:", error);
-    return res
-      .status(500)
-      .json({ success: false, message: "Failed to fetch stats" });
+    logger.error('Dashboard stats error:', error);
+    return res.status(500).json({ success: false, message: 'Failed to fetch stats' });
   }
 };
+
 
 // Get All Users with pagination metadata
 export const getAllUsers = async (req: Request, res: Response) => {
@@ -131,6 +150,10 @@ export const updateUserRole = async (req: Request, res: Response) => {
       previousRole: existingUser.role,
     });
 
+    // Invalidate caches after successful update
+    await CacheService.invalidateUserCache(userId);
+    await CacheService.invalidateDashboard(adminId);
+
     return res.status(200).json({ success: true, data: updatedUser });
   } catch (error) {
     logger.error("Update User Role Error: ", error);
@@ -139,6 +162,7 @@ export const updateUserRole = async (req: Request, res: Response) => {
       .json({ success: false, message: "Failed to update User Role" });
   }
 };
+
 
 // Delete User
 export const deleteUser = async (req: Request, res: Response) => {
@@ -328,9 +352,10 @@ export const getAdminLogs = async (req: Request, res: Response) => {
 };
 
 // User Search and Filter
-export const searchUsers = async (req: Request, res: Response) => {
+export const searchUsersBasic = async (req: Request, res: Response) => {
   try {
-    const { query, role, sortBy = 'createdAt', sortOrder = 'desc' } = req.query;
+    const adminId = req.user?.id!;
+    const { query, role, sortBy = "createdAt", sortOrder = "desc" } = req.query;
 
     let sql = `
       SELECT id, name, email, role, "createdAt", 
@@ -352,28 +377,42 @@ export const searchUsers = async (req: Request, res: Response) => {
       params.push(role);
     }
 
-    sql += ` ORDER BY "${sortBy}" ${sortOrder === 'asc' ? 'ASC' : 'DESC'}`;
+    sql += ` ORDER BY "${sortBy}" ${sortOrder === "asc" ? "ASC" : "DESC"}`;
     sql += ` LIMIT 50`;
 
     const users = await prisma.$queryRawUnsafe(sql, ...params);
 
-    res.json({ success: true, data: users });
+    // Save search history (No existing functionality changed)
+    await saveSearchHistory(
+      adminId,
+      String(query || ""),
+      "users",
+      role ? String(role) : undefined,
+    );
+
+    res.json({
+      success: true,
+      data: users,
+    });
   } catch (error) {
-    logger.error('Search users error:', error);
-    res.status(500).json({ success: false, message: 'Search failed' });
+    logger.error("Search users error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Search failed",
+    });
   }
 };
 
 // Revenue Report
 export const getRevenueReport = async (req: Request, res: Response) => {
   try {
-    const { period = 'monthly' } = req.query as { period?: string };
+    const { period = "monthly" } = req.query as { period?: string };
 
     let dateTrunc: string;
-    if (period === 'daily') dateTrunc = 'day';
-    else if (period === 'weekly') dateTrunc = 'week';
-    else if (period === 'yearly') dateTrunc = 'year';
-    else dateTrunc = 'month';
+    if (period === "daily") dateTrunc = "day";
+    else if (period === "weekly") dateTrunc = "week";
+    else if (period === "yearly") dateTrunc = "year";
+    else dateTrunc = "month";
 
     // Safe Dynamic Identifier mapping to prevent Prisma query breakdown
     const safeTrunc = Prisma.raw(`'${dateTrunc}'`);
@@ -412,15 +451,62 @@ export const getRevenueReport = async (req: Request, res: Response) => {
           total_revenue: 0,
           avg_order_value: 0,
           max_order_value: 0,
-          min_order_value: 0
+          min_order_value: 0,
         },
         revenueData,
         period,
       },
     });
   } catch (error) {
-    logger.error('Revenue report error:', error);
-    return res.status(500).json({ success: false, message: 'Failed to generate revenue report' });
+    logger.error("Revenue report error:", error);
+    return res
+      .status(500)
+      .json({ success: false, message: "Failed to generate revenue report" });
+  }
+};
+
+// ============ Get Search History ============
+export const getSearchHistoryController = async (
+  req: Request,
+  res: Response,
+) => {
+  try {
+    const adminId = req.user?.id!;
+    const history = await getSearchHistory(adminId);
+
+    res.json({
+      success: true,
+      data: history,
+    });
+  } catch (error) {
+    logger.error("Get search history error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to get search history",
+    });
+  }
+};
+
+// ============ Clear Search History ============
+export const clearSearchHistoryController = async (
+  req: Request,
+  res: Response,
+) => {
+  try {
+    const adminId = req.user?.id!;
+
+    await clearSearchHistory(adminId);
+
+    res.json({
+      success: true,
+      message: "Search history cleared",
+    });
+  } catch (error) {
+    logger.error("Clear search history error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to clear search history",
+    });
   }
 };
 
@@ -470,13 +556,22 @@ export const getUserActivityReport = async (req: Request, res: Response) => {
       success: true,
       data: {
         topUsersByProjects,
-        activeUsers: activeUsers[0] || { active_users: 0, projects_created: 0, orders_placed: 0 },
+        activeUsers: activeUsers[0] || {
+          active_users: 0,
+          projects_created: 0,
+          orders_placed: 0,
+        },
         userGrowth,
       },
     });
   } catch (error) {
-    logger.error('User activity report error:', error);
-    return res.status(500).json({ success: false, message: 'Failed to generate user activity report' });
+    logger.error("User activity report error:", error);
+    return res
+      .status(500)
+      .json({
+        success: false,
+        message: "Failed to generate user activity report",
+      });
   }
 };
 
@@ -523,27 +618,32 @@ export const getProjectAnalytics = async (req: Request, res: Response) => {
           with_image: 0,
           with_video: 0,
           without_image: 0,
-          image_only: 0
+          image_only: 0,
         },
         aspectRatios,
         projectsTrend,
       },
     });
   } catch (error) {
-    logger.error('Project analytics error:', error);
-    return res.status(500).json({ success: false, message: 'Failed to generate project analytics' });
+    logger.error("Project analytics error:", error);
+    return res
+      .status(500)
+      .json({
+        success: false,
+        message: "Failed to generate project analytics",
+      });
   }
 };
 
-// Export Report (CSV) 
+// Export Report (CSV)
 export const exportReport = async (req: Request, res: Response) => {
   try {
-    const { type = 'users' } = req.query as { type?: string };
+    const { type = "users" } = req.query as { type?: string };
 
     let data: any[] = [];
     let headers: string[] = [];
 
-    if (type === 'users') {
+    if (type === "users") {
       data = await prisma.$queryRaw`
         SELECT 
           id, name, email, role, "loginType", 
@@ -553,8 +653,17 @@ export const exportReport = async (req: Request, res: Response) => {
         FROM "users" u
         ORDER BY "createdAt" DESC
       `;
-      headers = ['ID', 'Name', 'Email', 'Role', 'Login Type', 'Created At', 'Projects', 'Orders'];
-    } else if (type === 'orders') {
+      headers = [
+        "ID",
+        "Name",
+        "Email",
+        "Role",
+        "Login Type",
+        "Created At",
+        "Projects",
+        "Orders",
+      ];
+    } else if (type === "orders") {
       data = await prisma.$queryRaw`
         SELECT 
           o.id, o.amount::float, o.status, o."createdAt",
@@ -565,8 +674,16 @@ export const exportReport = async (req: Request, res: Response) => {
         JOIN "subscriptions" s ON s.id = o."subscriptionId"
         ORDER BY o."createdAt" DESC
       `;
-      headers = ['Order ID', 'Amount', 'Status', 'Created At', 'User', 'Email', 'Plan'];
-    } else if (type === 'projects') {
+      headers = [
+        "Order ID",
+        "Amount",
+        "Status",
+        "Created At",
+        "User",
+        "Email",
+        "Plan",
+      ];
+    } else if (type === "projects") {
       data = await prisma.$queryRaw`
         SELECT 
           p.id, p."projectName", p."productName", 
@@ -578,35 +695,53 @@ export const exportReport = async (req: Request, res: Response) => {
         JOIN "users" u ON u.id = p."userId"
         ORDER BY p."createdAt" DESC
       `;
-      headers = ['Project ID', 'Name', 'Product', 'Has Image', 'Has Video', 'Aspect Ratio', 'Created At', 'User'];
+      headers = [
+        "Project ID",
+        "Name",
+        "Product",
+        "Has Image",
+        "Has Video",
+        "Aspect Ratio",
+        "Created At",
+        "User",
+      ];
     }
 
     // 1. Safe CSV Data Parsing (RFC 4180 Compliant - Prevents broken layout from commas or quotes)
     const escapeCSV = (val: any): string => {
-      if (val === null || val === undefined) return '';
-      let str = typeof val === 'object' ? JSON.stringify(val) : String(val);
+      if (val === null || val === undefined) return "";
+      let str = typeof val === "object" ? JSON.stringify(val) : String(val);
       str = str.replace(/"/g, '""');
-      if (str.includes(',') || str.includes('"') || str.includes('\n') || str.includes('\r')) {
+      if (
+        str.includes(",") ||
+        str.includes('"') ||
+        str.includes("\n") ||
+        str.includes("\r")
+      ) {
         str = `"${str}"`;
       }
       return str;
     };
 
     // 2. Build CSV with precise ordering mapping instead of raw Object.values()
-    let csv = headers.join(',') + '\n';
-    
-    data.forEach(row => {
-      const rowValues = Object.keys(row).map(key => escapeCSV(row[key]));
-      csv += rowValues.join(',') + '\n';
+    let csv = headers.join(",") + "\n";
+
+    data.forEach((row) => {
+      const rowValues = Object.keys(row).map((key) => escapeCSV(row[key]));
+      csv += rowValues.join(",") + "\n";
     });
 
-    res.setHeader('Content-Type', 'text/csv');
-    res.setHeader('Content-Disposition', `attachment; filename=${type}_report_${Date.now()}.csv`);
+    res.setHeader("Content-Type", "text/csv");
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename=${type}_report_${Date.now()}.csv`,
+    );
     return res.status(200).send(csv);
-
   } catch (error) {
-    logger.error('Export report error:', error);
-    return res.status(500).json({ success: false, message: 'Failed to export report' });
+    logger.error("Export report error:", error);
+    return res
+      .status(500)
+      .json({ success: false, message: "Failed to export report" });
   }
 };
 
@@ -658,18 +793,240 @@ export const getDashboardSummary = async (req: Request, res: Response) => {
           total_revenue: 0,
           total_projects: 0,
           generated_images: 0,
-          generated_videos: 0
+          generated_videos: 0,
         },
         today: today[0] || {
           new_users_today: 0,
           orders_today: 0,
-          revenue_today: 0
+          revenue_today: 0,
         },
         recentActivity,
       },
     });
   } catch (error) {
-    logger.error('Dashboard summary error:', error);
-    return res.status(500).json({ success: false, message: 'Failed to get dashboard summary' });
+    logger.error("Dashboard summary error:", error);
+    return res
+      .status(500)
+      .json({ success: false, message: "Failed to get dashboard summary" });
+  }
+};
+
+// ============ Advanced User Search with Pagination ============
+export const searchUsers = async (req: Request, res: Response) => {
+  try {
+    const options = getPaginationOptions(req.query);
+    const { page, limit, sortBy, sortOrder, search, filter } = options;
+
+    // Build WHERE clause
+    let whereClause = "WHERE 1=1";
+    const params: any[] = [];
+
+    // Search (name, email)
+    if (search) {
+      whereClause += ` AND (u.name ILIKE $${params.length + 1} OR u.email ILIKE $${params.length + 2})`;
+      params.push(`%${search}%`, `%${search}%`);
+    }
+
+    // Filter by role
+    if (filter.role) {
+      whereClause += ` AND u.role = $${params.length + 1}`;
+      params.push(filter.role);
+    }
+
+    // Filter by login type
+    if (filter.loginType) {
+      whereClause += ` AND u."loginType" = $${params.length + 1}`;
+      params.push(filter.loginType);
+    }
+
+    // Filter by date range
+    if (filter.startDate) {
+      whereClause += ` AND u."createdAt" >= $${params.length + 1}`;
+      params.push(new Date(filter.startDate));
+    }
+    if (filter.endDate) {
+      whereClause += ` AND u."createdAt" <= $${params.length + 1}`;
+      params.push(new Date(filter.endDate));
+    }
+
+    // Get total count
+    const countResult = await prisma.$queryRawUnsafe<{ total: string }>(
+      `SELECT COUNT(*) as total 
+      FROM users u
+      ${whereClause}`,
+    );
+    const total = Number(countResult[0]?.total) || 0;
+
+    // Get paginated data
+    const offset = (page - 1) * limit;
+    const data = await prisma.$queryRawUnsafe(
+      `SELECT 
+        u.id,
+        u.name,
+        u.email,
+        u.role,
+        u."loginType",
+        u.picture,
+        u."createdAt",
+        COUNT(DISTINCT p.id) as project_count,
+        COUNT(DISTINCT o.id) as order_count,
+        COALESCE(SUM(o.amount), 0) as total_spent
+      FROM users u
+      LEFT JOIN projects p ON p."userId" = u.id
+      LEFT JOIN orders o ON o."userId" = u.id AND o.status = 'completed'
+      ${whereClause}
+      GROUP BY u.id
+      ORDER BY "${sortBy}" ${sortOrder === "asc" ? "ASC" : "DESC"}
+      LIMIT ${limit} OFFSET ${offset}`,
+    );
+
+    const response = buildPaginatedResponse(data, total, options);
+    res.json({ success: true, ...response });
+  } catch (error) {
+    logger.error("Search users error:", error);
+    res.status(500).json({ success: false, message: "Failed to search users" });
+  }
+};
+
+function buildPaginatedResponse(data: unknown, total: number, options: any) {
+  const page = options.page || 1;
+  const limit = options.limit || 10;
+  const totalPages = Math.ceil(total / limit);
+
+  return {
+    data,
+    pagination: {
+      total,
+      page,
+      limit,
+      totalPages,
+      hasNextPage: page < totalPages,
+      hasPrevPage: page > 1,
+    },
+  };
+}
+function getPaginationOptions(query: ParsedQs) {
+  const pageValue = Array.isArray(query.page) ? query.page[0] : query.page;
+  const limitValue = Array.isArray(query.limit) ? query.limit[0] : query.limit;
+  const sortByValue = Array.isArray(query.sortBy)
+    ? query.sortBy[0]
+    : query.sortBy;
+  const sortOrderValue = Array.isArray(query.sortOrder)
+    ? query.sortOrder[0]
+    : query.sortOrder;
+  const searchValue = Array.isArray(query.search)
+    ? query.search[0]
+    : query.search;
+  const roleValue = Array.isArray(query.role) ? query.role[0] : query.role;
+  const loginTypeValue = Array.isArray(query.loginType)
+    ? query.loginType[0]
+    : query.loginType;
+  const startDateValue = Array.isArray(query.startDate)
+    ? query.startDate[0]
+    : query.startDate;
+  const endDateValue = Array.isArray(query.endDate)
+    ? query.endDate[0]
+    : query.endDate;
+
+  const page = Number(pageValue) > 0 ? Number(pageValue) : 1;
+  let limit = Number(limitValue) > 0 ? Number(limitValue) : 10;
+  if (limit > 100) limit = 100;
+
+  const sortBy =
+    typeof sortByValue === "string" && sortByValue.trim() !== ""
+      ? sortByValue
+      : "createdAt";
+  const sortOrderRaw =
+    typeof sortOrderValue === "string" ? sortOrderValue.toLowerCase() : "desc";
+  const sortOrder = sortOrderRaw === "asc" ? "asc" : "desc";
+
+  const search =
+    typeof searchValue === "string" && searchValue.trim() !== ""
+      ? searchValue.trim()
+      : undefined;
+
+  return {
+    page,
+    limit,
+    sortBy,
+    sortOrder,
+    search,
+    filter: {
+      role:
+        typeof roleValue === "string" && roleValue.trim() !== ""
+          ? roleValue
+          : undefined,
+      loginType:
+        typeof loginTypeValue === "string" && loginTypeValue.trim() !== ""
+          ? loginTypeValue
+          : undefined,
+      startDate:
+        typeof startDateValue === "string" && startDateValue.trim() !== ""
+          ? startDateValue
+          : undefined,
+      endDate:
+        typeof endDateValue === "string" && endDateValue.trim() !== ""
+          ? endDateValue
+          : undefined,
+    },
+  };
+}
+
+// ============ Cursor-based Pagination (Next/Previous) ============
+export const getUsersCursor = async (req: Request, res: Response) => {
+  try {
+    const {
+      cursor,
+      limit = 10,
+      sortBy = "createdAt",
+      sortOrder = "desc",
+    } = req.query;
+    const take = parseInt(limit as string) + 1; // +1 to check if next exists
+
+    let whereClause = "";
+    const params: any[] = [];
+
+    if (cursor) {
+      const decoded = Buffer.from(cursor as string, "base64").toString();
+      const [field, value] = decoded.split("|");
+      whereClause = `WHERE "createdAt" ${sortOrder === "desc" ? "<" : ">"} $${params.length + 1}`;
+      if (value) params.push(new Date(value));
+    }
+
+    const query = `
+      SELECT 
+        id, name, email, role, "createdAt"
+      FROM users
+      ${whereClause}
+      ORDER BY "${sortBy}" ${sortOrder === "asc" ? "ASC" : "DESC"}
+      LIMIT ${take}
+    `;
+
+    const data = (await prisma.$queryRawUnsafe(query, ...params)) as any[];
+
+    // Check if next exists
+    const hasNext = data.length > parseInt(limit as string);
+    const result = hasNext ? data.slice(0, -1) : data;
+
+    // Generate next cursor
+    let nextCursor: string | null = null;
+    if (hasNext && result.length > 0) {
+      const last = result[result.length - 1];
+      const cursorValue = `${sortBy}|${last.createdAt}`;
+      nextCursor = Buffer.from(cursorValue).toString("base64");
+    }
+
+    res.json({
+      success: true,
+      data: result,
+      meta: {
+        hasNext,
+        nextCursor,
+        limit: parseInt(limit as string),
+      },
+    });
+  } catch (error) {
+    logger.error("Cursor pagination error:", error);
+    res.status(500).json({ success: false, message: "Failed to fetch users" });
   }
 };
