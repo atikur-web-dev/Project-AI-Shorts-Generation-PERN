@@ -1,53 +1,59 @@
-// Backend/src/routes/admin.routes.ts
 import { Router } from "express";
 import {
   getDashboardStats,
+  getDashboardSummary,
+  getTimeSeriesStats,
+} from "../controller/admin/dashboard.controller.js";
+import {
   getAllUsers,
   updateUserRole,
   deleteUser,
+  searchUsers,
+  getUsersCursor,
+} from "../controller/admin/user.controller.js";
+import {
   getAllOrders,
   updateOrderStatus,
-  getRevenueReport,          
-  getUserActivityReport,     
-  getProjectAnalytics,       
-  exportReport,              
-  getTimeSeriesStats,
-  getUsersCursor,
-  getDashboardSummary,
+} from "../controller/admin/order.controller.js";
+import {
+  getRevenueReport,
+  getUserActivityReport,
+  getProjectAnalytics,
+  exportReport,
+} from "../controller/admin/report.controller.js";
+import {
   getAdminLogs,
-  searchUsers,
-} from '../controller/admin.controller.js';
+  getSearchHistoryController,
+  clearSearchHistoryController,
+} from "../controller/admin/log.controller.js";
 import { authenticate } from "../middleware/auth.middleware.js";
 import { isAdmin } from "../middleware/admin.middleware.js";
 
 const router = Router();
 
-// All Projected Admin Route
 router.use(authenticate, isAdmin);
 
-// Dashboard
 router.get("/admin/stats", getDashboardStats);
+router.get("/admin/dashboard", getDashboardSummary);
+router.get("/admin/stats/timeseries", getTimeSeriesStats);
 
-// User Management
 router.get("/admin/users", getAllUsers);
-router.patch("/admin/users/:usersId/role", updateUserRole);
+router.patch("/admin/users/:userId/role", updateUserRole);
 router.delete("/admin/users/:userId", deleteUser);
-router.get('/admin/users/search', searchUsers);
+router.get("/admin/users/search", searchUsers);
+router.get("/admin/users/cursor", getUsersCursor);
 
-// Orders Management
 router.get("/admin/orders", getAllOrders);
 router.patch("/admin/orders/:orderId/status", updateOrderStatus);
 
-// admin logs
-router.get('/admin/logs', getAdminLogs);
+router.get("/admin/logs", getAdminLogs);
 
-// ============ Reports ============
-router.get('/admin/reports/revenue', getRevenueReport);
-router.get('/admin/reports/users', getUserActivityReport);
-router.get('/admin/reports/projects', getProjectAnalytics);
-router.get('/admin/reports/export', exportReport);
-router.get('/admin/dashboard', getDashboardSummary);
-router.get('/admin/users/cursor', getUsersCursor);
+router.get("/admin/reports/revenue", getRevenueReport);
+router.get("/admin/reports/users", getUserActivityReport);
+router.get("/admin/reports/projects", getProjectAnalytics);
+router.get("/admin/reports/export", exportReport);
 
+router.get("/admin/search/history", getSearchHistoryController);
+router.delete("/admin/search/history", clearSearchHistoryController);
 
 export const adminRouter = router;

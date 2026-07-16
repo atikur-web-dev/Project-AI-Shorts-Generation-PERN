@@ -12,6 +12,11 @@ export const createProject = async (req: Request, res: Response) => {
   let creditDeducted = false;
   const userId = req.user?.id;
 
+  console.log("Create project request received");
+  console.log("User ID:", userId);
+  console.log("Request body:", req.body);
+  console.log("Request files:", req.files);
+
   if (!userId) {
     return res.status(401).json({ success: false, message: "Unauthorized" });
   }
@@ -22,6 +27,8 @@ export const createProject = async (req: Request, res: Response) => {
       where: { id: userId },
       include: { userSubscription: true },
     });
+
+    console.log("User credits:", user?.userSubscription?.credits);
 
     if (!user?.userSubscription || user.userSubscription.credits < 5) {
       return res.status(400).json({
@@ -34,6 +41,9 @@ export const createProject = async (req: Request, res: Response) => {
     const files = req.files as { [fieldname: string]: Express.Multer.File[] };
     const productImage = files?.productImage?.[0];
     const modelImage = files?.modelImage?.[0];
+
+    console.log("Product image:", productImage ? "present" : "missing");
+    console.log("Model image:", modelImage ? "present" : "missing");
 
     if (!productImage || !modelImage) {
       return res.status(400).json({
@@ -48,14 +58,18 @@ export const createProject = async (req: Request, res: Response) => {
       data: { credits: { decrement: 5 } },
     });
     creditDeducted = true;
+    console.log("Credits deducted");
 
     // 4. Upload product & model images to Cloudinary
+    console.log("Uploading images to Cloudinary...");
     const [productUrl, modelUrl] = await Promise.all([
       uploadToCloudinary(productImage.path),
       uploadToCloudinary(modelImage.path),
     ]);
+    console.log("Images uploaded successfully");
 
     // 5. Create project record
+    console.log("Creating project record...");
     const project = await prisma.project.create({
       data: {
         projectName: req.body.projectName || "Untitled",
@@ -70,8 +84,10 @@ export const createProject = async (req: Request, res: Response) => {
         userId,
       },
     });
+    console.log("Project created with ID:", project.id);
 
     // 6. Generate AI image
+    console.log("Generating AI image...");
     const generatedImage = await generateImageWithAI(
       productImage,
       modelImage,
@@ -80,6 +96,7 @@ export const createProject = async (req: Request, res: Response) => {
         aspectRatio: req.body.aspectRatio,
       },
     );
+    console.log("AI image generated");
 
     // 7. Update project with generated image
     const updatedProject = await prisma.project.update({
@@ -96,6 +113,8 @@ export const createProject = async (req: Request, res: Response) => {
       data: updatedProject,
     });
   } catch (error) {
+    console.error("Project creation error:", error);
+    
     // Refund credits if failed
     if (creditDeducted) {
       await prisma.userSubscription.update({
@@ -107,7 +126,33 @@ export const createProject = async (req: Request, res: Response) => {
     logger.error("Project creation failed:", error);
     res.status(500).json({
       success: false,
-      message: "Project creation failed. Credits refunded.",
+      message: error instanceof Error ? error.message : "Project creation failed. Credits refunded.",
+    });
+  }
+};
+
+export const getProjects = async (req: Request, res: Response) => {
+  const userId = req.user?.id;
+
+  if (!userId) {
+    return res.status(401).json({ success: false, message: "Unauthorized" });
+  }
+
+  try {
+    const projects = await prisma.project.findMany({
+      where: { userId },
+      orderBy: { createdAt: "desc" },
+    });
+
+    return res.json({
+      success: true,
+      data: projects,
+    });
+  } catch (error) {
+    logger.error("Get projects error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to get projects",
     });
   }
 };

@@ -1,10 +1,17 @@
+// Backend/src/utils/pagination.ts
 export interface PaginationOptions {
-  page?: number;
-  limit?: number;
-  sortBy?: string;
-  sortOrder?: 'asc' | 'desc';
-  search?: string;
-  filter?: Record<string, any>;
+  page: number;
+  limit: number;
+  sortBy: string;
+  sortOrder: 'asc' | 'desc';
+  search: string;
+  filter: {
+    role?: string;
+    loginType?: string;
+    startDate?: string;
+    endDate?: string;
+    [key: string]: any;
+  };
 }
 
 export interface PaginatedResponse<T> {
@@ -25,7 +32,17 @@ export const getPaginationOptions = (query: any): PaginationOptions => {
   const sortBy = query.sortBy || 'createdAt';
   const sortOrder = query.sortOrder === 'asc' ? 'asc' : 'desc';
   const search = query.search || '';
-  const filter = query.filter ? JSON.parse(query.filter) : {};
+
+  let filter: Record<string, any> = {};
+  if (query.filter) {
+    try {
+      filter = typeof query.filter === 'string' 
+        ? JSON.parse(query.filter) 
+        : query.filter;
+    } catch {
+      filter = {};
+    }
+  }
 
   return { page, limit, sortBy, sortOrder, search, filter };
 };

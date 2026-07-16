@@ -31,7 +31,7 @@ const corsOptions = {
   origin:
     config.NODE_ENV === "production"
       ? process.env.CLIENT_URL || "https://yourdomain.com"
-      : "*",
+      : process.env.CLIENT_URL || "http://localhost:3000",
   credentials: true,
   methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
   allowedHeaders: ["Content-Type", "Authorization"],

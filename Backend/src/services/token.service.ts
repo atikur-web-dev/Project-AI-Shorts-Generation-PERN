@@ -70,44 +70,36 @@ export const rotateRefreshToken = async (oldRefreshToken: string) => {
   }
 };
 
-/**
- * ৩. সব সেশন ডিলিট বা ইউজারকে সব ডিভাইস থেকে লগআউট করার ফাংশন
- */
 export const revokeAllSessions = async (userId: string) => {
   try {
-    // ডাটাবেজ থেকে ওই ইউজারের সমস্ত সেশন রো (Row) ডিলিট করে দেওয়া হচ্ছে
+   
     await prisma.session.deleteMany({ where: { userId } });
-    logger.info(`🗑️ All sessions revoked for user: ${userId}`);
+    logger.info(`All sessions revoked for user: ${userId}`);
   } catch (error) {
-    logger.error(`❌ Failed to revoke sessions for user ${userId}:`, error);
+    logger.error(` Failed to revoke sessions for user ${userId}:`, error);
     throw new Error('Could not revoke sessions');
   }
 };
 
-/**
- * ৪. রিফ্রেশ টোকেন দিয়ে সেশন চেক করার ফাংশন
- * ফ্রন্টএন্ড থেকে পাঠানো রিফ্রেশ টোকেনটি আসলেই ডাটাবেজে আছে কি না তা যাচাই করে।
- */
 export const getSessionByRefreshToken = async (refreshToken: string) => {
   try {
-    // চেক করার জন্য রিফ্রেশ টোকেনটিকে হ্যাস করা হচ্ছে
+   
     const hashedToken = hashToken(refreshToken);
     
-    // ডাটাবেজ থেকে সেশন এবং ইউজারের তথ্য খোঁজা হচ্ছে
+   
     const session = await prisma.session.findFirst({
       where: { refreshToken: hashedToken },
       include: { user: true },
     });
 
-    // সেশন না পাওয়া গেলে অথবা মেয়াদ শেষ হয়ে গেলে null (কিছুই না) রিটার্ন করবে
+    
     if (!session || session.expiresAt < new Date()) {
       return null;
     }
 
-    // সেশন ঠিক থাকলে পুরো সেশনের অবজেক্টটি রিটার্ন করবে
     return session;
   } catch (error) {
-    logger.error('❌ Error fetching session:', error);
+    logger.error('Error fetching session:', error);
     return null;
   }
 };

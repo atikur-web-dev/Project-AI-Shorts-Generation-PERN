@@ -47,6 +47,21 @@ export const handleGoogleCallback = async (
     throw new Error("Email could not found");
   }
 
+  // Get or create free subscription
+  let freeSubscription = await prisma.subscription.findUnique({
+    where: { name: "free" },
+  });
+
+  if (!freeSubscription) {
+    freeSubscription = await prisma.subscription.create({
+      data: {
+        name: "free",
+        price: 0,
+        credits: 30,
+      },
+    });
+  }
+
   // Upsert user in database
   const user = await prisma.user.upsert({
     where: { email: data.email },
@@ -67,7 +82,7 @@ export const handleGoogleCallback = async (
           credits: 30,
           subscription: {
             connect: {
-              id: "free",
+              id: freeSubscription.id,
             },
           },
         },

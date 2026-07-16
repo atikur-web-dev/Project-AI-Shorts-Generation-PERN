@@ -73,6 +73,21 @@ export const handleGitHubCallback = async (
     throw new Error("GitHub email not found");
   }
 
+  // Get or create free subscription
+  let freeSubscription = await prisma.subscription.findUnique({
+    where: { name: "free" },
+  });
+
+  if (!freeSubscription) {
+    freeSubscription = await prisma.subscription.create({
+      data: {
+        name: "free",
+        price: 0,
+        credits: 30,
+      },
+    });
+  }
+
   // Upsert user in database
   const user = await prisma.user.upsert({
     where: { email },
@@ -94,6 +109,11 @@ export const handleGitHubCallback = async (
       userSubscription: {
         create: {
           credits: 30,
+          subscription: {
+            connect: {
+              id: freeSubscription.id,
+            },
+          },
         },
       },
     },
