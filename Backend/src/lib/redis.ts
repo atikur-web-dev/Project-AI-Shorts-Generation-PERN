@@ -10,7 +10,7 @@ redisClient.on('error', (err) => {
 });
 
 redisClient.on('connect', () => {
-  logger.info('✅ Redis connected successfully');
+  logger.info(' Redis connected successfully');
 });
 
 await redisClient.connect();
