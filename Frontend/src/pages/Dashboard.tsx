@@ -25,21 +25,27 @@ const Dashboard: React.FC = () => {
     }
   }, [user, loading, navigate]);
 
-  const loadProjects = async () => {
-    try {
-      setLoadingProjects(true);
+const loadProjects = async () => {
+  try {
+    setLoadingProjects(true);
 
-      const response = await projectService.getProjects();
+    const response = await projectService.getProjects();
 
-      if (response.success && response.data) {
-        setProjects(response.data);
-      }
-    } catch (error) {
-      console.error("Failed to load projects:", error);
-    } finally {
-      setLoadingProjects(false);
+    console.log("GET PROJECTS RESPONSE:", response);
+    console.log("PROJECT DATA:", response.data);
+
+    if (response.success && Array.isArray(response.data)) {
+      setProjects(response.data);
+    } else {
+      setProjects([]);
     }
-  };
+  } catch (error) {
+    console.error("Failed to load projects:", error);
+    setProjects([]);
+  } finally {
+    setLoadingProjects(false);
+  }
+};
 
   if (loading || loadingProjects) {
     return (

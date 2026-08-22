@@ -134,8 +134,13 @@ export const createProject = async (req: Request, res: Response) => {
 export const getProjects = async (req: Request, res: Response) => {
   const userId = req.user?.id;
 
+  console.log("GET PROJECTS USER ID:", userId);
+
   if (!userId) {
-    return res.status(401).json({ success: false, message: "Unauthorized" });
+    return res.status(401).json({
+      success: false,
+      message: "Unauthorized",
+    });
   }
 
   try {
@@ -144,12 +149,15 @@ export const getProjects = async (req: Request, res: Response) => {
       orderBy: { createdAt: "desc" },
     });
 
+    console.log("GET PROJECTS RESULT:", projects);
+
     return res.json({
       success: true,
       data: projects,
     });
   } catch (error) {
     logger.error("Get projects error:", error);
+
     return res.status(500).json({
       success: false,
       message: "Failed to get projects",
