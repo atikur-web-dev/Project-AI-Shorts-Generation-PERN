@@ -3,7 +3,7 @@ import type { Request, Response } from "express";
 import {
   getGoogleAuthUrl,
   handleGoogleCallback,
-} from "../services/auth.service.js";
+} from "../services/auth-google.service.js";
 import { setRefreshTokenCookie } from "../utils/cookies.js";
 import { logger } from "../config/logger.js";
 

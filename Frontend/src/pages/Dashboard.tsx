@@ -1,59 +1,50 @@
-import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
-import { projectService } from '../services/projectService';
-import { Project } from '../types';
-import { Plus, Video, Clock, CheckCircle } from 'lucide-react';
+// Frontend/src/pages/Dashboard.tsx
+
+import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
+import { projectService } from "../services/projectService";
+import { Project } from "../types";
+import { Plus, Image, CheckCircle, Sparkles } from "lucide-react";
 
 const Dashboard: React.FC = () => {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
+
   const [projects, setProjects] = useState<Project[]>([]);
   const [loadingProjects, setLoadingProjects] = useState(true);
 
   useEffect(() => {
     if (!loading && !user) {
-      navigate('/login');
+      navigate("/login");
       return;
     }
 
-    loadProjects();
+    if (user) {
+      loadProjects();
+    }
   }, [user, loading, navigate]);
 
   const loadProjects = async () => {
     try {
       setLoadingProjects(true);
+
       const response = await projectService.getProjects();
+
       if (response.success && response.data) {
         setProjects(response.data);
       }
     } catch (error) {
-      console.error('Failed to load projects:', error);
+      console.error("Failed to load projects:", error);
     } finally {
       setLoadingProjects(false);
     }
   };
 
-  const handleGenerateVideo = async (projectId: string) => {
-    if (!confirm('This will cost 10 credits. Do you want to continue?')) {
-      return;
-    }
-
-    try {
-      const response = await projectService.generateVideo(projectId);
-      if (response.success) {
-        alert('Video generation started! It may take a few minutes.');
-        loadProjects();
-      }
-    } catch (error: any) {
-      alert('Error generating video: ' + (error.response?.data?.message || error.message));
-    }
-  };
-
   if (loading || loadingProjects) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600" />
       </div>
     );
   }
@@ -65,75 +56,113 @@ const Dashboard: React.FC = () => {
         <div className="flex justify-between items-center mb-8">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
+
             <p className="text-gray-600 mt-1">Welcome back, {user?.name}!</p>
           </div>
+
           <button
-            onClick={() => navigate('/create-project')}
-            className="flex items-center space-x-2 bg-primary-600 text-white px-6 py-3 rounded-lg hover:bg-primary-700 transition-colors"
+            onClick={() => navigate("/create-project")}
+            className="flex items-center space-x-2 bg-primary-600 text-white px-6 py-3 rounded-lg hover:bg-primary-700 transition-colors font-medium"
           >
             <Plus size={20} />
-            <span>New Project</span>
+            <span>New Image</span>
           </button>
         </div>
 
         {/* Stats */}
         <div className="grid md:grid-cols-3 gap-6 mb-8">
+          {/* Total Projects */}
           <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-gray-600 text-sm">Total Projects</p>
-                <p className="text-3xl font-bold text-gray-900 mt-1">{projects.length}</p>
+
+                <p className="text-3xl font-bold text-gray-900 mt-1">
+                  {projects.length}
+                </p>
               </div>
+
               <div className="bg-primary-100 p-3 rounded-lg">
-                <Video className="text-primary-600" size={24} />
+                <Image className="text-primary-600" size={24} />
               </div>
             </div>
           </div>
 
+          {/* Images Generated */}
           <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-gray-600 text-sm">Videos Generated</p>
+                <p className="text-gray-600 text-sm">Images Generated</p>
+
                 <p className="text-3xl font-bold text-gray-900 mt-1">
-                  {projects.filter((p) => p.generatedVideo).length}
+                  {projects.filter((project) => project.generatedImage).length}
                 </p>
               </div>
+
               <div className="bg-green-100 p-3 rounded-lg">
                 <CheckCircle className="text-green-600" size={24} />
               </div>
             </div>
           </div>
 
+          {/* Credits */}
           <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-gray-600 text-sm">Pending Videos</p>
+                <p className="text-gray-600 text-sm">AI Credits</p>
+
                 <p className="text-3xl font-bold text-gray-900 mt-1">
-                  {projects.filter((p) => !p.generatedVideo).length}
+                  {user?.userSubscription?.credits ?? 0}
                 </p>
+
+                <p className="text-xs text-gray-500 mt-1">Available credits</p>
               </div>
+
               <div className="bg-yellow-100 p-3 rounded-lg">
-                <Clock className="text-yellow-600" size={24} />
+                <Sparkles className="text-yellow-600" size={24} />
               </div>
             </div>
           </div>
         </div>
 
-        {/* Projects Grid */}
+        {/* Projects */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-100">
-          <div className="p-6 border-b border-gray-100">
-            <h2 className="text-xl font-semibold text-gray-900">Your Projects</h2>
+          <div className="p-6 border-b border-gray-100 flex items-center justify-between">
+            <div>
+              <h2 className="text-xl font-semibold text-gray-900">
+                Your Projects
+              </h2>
+
+              <p className="text-sm text-gray-500 mt-1">
+                Your AI-generated image projects
+              </p>
+            </div>
+
+            <button
+              onClick={() => navigate("/create-project")}
+              className="text-sm text-primary-600 hover:text-primary-700 font-medium"
+            >
+              Create New
+            </button>
           </div>
 
           {projects.length === 0 ? (
             <div className="p-12 text-center">
-              <Video className="mx-auto text-gray-400 mb-4" size={48} />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No projects yet</h3>
-              <p className="text-gray-600 mb-4">Create your first project to get started</p>
+              <Image className="mx-auto text-gray-400 mb-4" size={48} />
+
+              <h3 className="text-lg font-medium text-gray-900 mb-2">
+                No projects yet
+              </h3>
+
+              <p className="text-gray-600 mb-4">
+                Create your first AI-generated image project to get started.
+              </p>
+
               <button
-                onClick={() => navigate('/create-project')}
-                className="bg-primary-600 text-white px-6 py-2 rounded-lg hover:bg-primary-700 transition-colors"
+                onClick={() => navigate("/create-project")}
+                className="inline-flex items-center gap-2 bg-primary-600 text-white px-6 py-2.5 rounded-lg hover:bg-primary-700 transition-colors"
               >
+                <Plus size={18} />
                 Create Project
               </button>
             </div>
@@ -142,9 +171,10 @@ const Dashboard: React.FC = () => {
               {projects.map((project) => (
                 <div
                   key={project.id}
-                  className="bg-gray-50 rounded-lg p-4 border border-gray-200 hover:shadow-md transition-shadow"
+                  className="bg-gray-50 rounded-lg overflow-hidden border border-gray-200 hover:shadow-md transition-shadow"
                 >
-                  <div className="aspect-video bg-gray-200 rounded-lg mb-4 overflow-hidden">
+                  {/* Image */}
+                  <div className="aspect-video bg-gray-200 overflow-hidden">
                     {project.generatedImage ? (
                       <img
                         src={project.generatedImage}
@@ -153,42 +183,38 @@ const Dashboard: React.FC = () => {
                       />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-gray-400">
-                        No image
+                        <Image size={40} />
                       </div>
                     )}
                   </div>
 
-                  <h3 className="font-semibold text-gray-900 mb-1">{project.projectName}</h3>
-                  <p className="text-sm text-gray-600 mb-3">{project.productName}</p>
+                  {/* Content */}
+                  <div className="p-4">
+                    <h3 className="font-semibold text-gray-900 mb-1 truncate">
+                      {project.projectName}
+                    </h3>
 
-                  <div className="flex items-center justify-between">
-                    <span
-                      className={`text-xs px-2 py-1 rounded-full ${
-                        project.generatedVideo
-                          ? 'bg-green-100 text-green-700'
-                          : 'bg-yellow-100 text-yellow-700'
-                      }`}
-                    >
-                      {project.generatedVideo ? 'Video Ready' : 'Image Generated'}
-                    </span>
+                    <p className="text-sm text-gray-600 mb-3 truncate">
+                      {project.productName}
+                    </p>
 
-                    {!project.generatedVideo && (
-                      <button
-                        onClick={() => handleGenerateVideo(project.id)}
-                        className="text-xs bg-primary-600 text-white px-3 py-1 rounded hover:bg-primary-700 transition-colors"
-                      >
-                        Generate Video
-                      </button>
-                    )}
+                    <div className="flex items-center justify-between">
+                      <span className="inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-full bg-green-100 text-green-700">
+                        <CheckCircle size={12} />
+                        Image Generated
+                      </span>
 
-                    {project.generatedVideo && (
-                      <button
-                        onClick={() => window.open(project.generatedVideo, '_blank')}
-                        className="text-xs bg-primary-600 text-white px-3 py-1 rounded hover:bg-primary-700 transition-colors"
-                      >
-                        View Video
-                      </button>
-                    )}
+                      {project.generatedImage && (
+                        <button
+                          onClick={() =>
+                            window.open(project.generatedImage, "_blank")
+                          }
+                          className="text-xs bg-primary-600 text-white px-3 py-1.5 rounded hover:bg-primary-700 transition-colors"
+                        >
+                          View Image
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
               ))}

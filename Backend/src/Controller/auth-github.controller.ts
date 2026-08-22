@@ -3,7 +3,7 @@ import type { Request, Response } from "express";
 import {
   getGitHubAuthUrl,
   handleGitHubCallback,
-} from "../services/auth.service.js";
+} from "../services/auth-github.service.js";
 import { setRefreshTokenCookie } from "../utils/cookies.js";
 import { logger } from "../config/logger.js";
 

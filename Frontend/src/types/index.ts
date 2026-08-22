@@ -1,3 +1,4 @@
+// Frontend/src/types/index.ts
 export interface User {
   id: string;
   email: string;
@@ -5,6 +6,7 @@ export interface User {
   picture?: string;
   loginType: 'google' | 'github' | 'email';
   role: 'USER' | 'ADMIN';
+  userSubscription?: UserSubscription;
 }
 
 export interface Project {
