@@ -13,7 +13,7 @@ export const apiLimiter = rateLimit({
 });
 
 export const aiLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000, // 1 hrs
+  windowMs: 60 * 60 * 1000, 
   max: 5,
   message: {
     success: false,

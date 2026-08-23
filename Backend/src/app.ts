@@ -65,7 +65,6 @@ app.use('/api/v1/admin', redisRateLimiter({
 }));
 app.use(performanceMonitor(1000));
 app.use("/api/v1/auth", authLimiter);
-app.use("/api/v1/projects", aiLimiter);
 
 // 2. Routers Mounted Second
 app.use("/api/v1", authRouter);
