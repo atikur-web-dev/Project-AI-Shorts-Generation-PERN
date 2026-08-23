@@ -68,7 +68,7 @@ export const getRevenueReport = async (req: Request, res: Response) => {
   }
 };
 
-export const getUserActivityReport = async (req: Request, res: Response) => {
+export const getUserActivityReport = async (_req: Request, res: Response) => {
   try {
     const topUsersByProjects = await prisma.$queryRaw`
       SELECT 
@@ -127,7 +127,7 @@ export const getUserActivityReport = async (req: Request, res: Response) => {
   }
 };
 
-export const getProjectAnalytics = async (req: Request, res: Response) => {
+export const getProjectAnalytics = async (_req: Request, res: Response) => {
   try {
     const projectStats = await prisma.$queryRaw<any[]>`
       SELECT 

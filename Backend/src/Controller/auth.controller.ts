@@ -1,6 +1,9 @@
 import type { Request, Response } from "express";
-
-import { logoutUser, rotateRefreshToken } from "../services/auth.service.js";
+import {
+  logoutUser,
+  rotateRefreshToken,
+  adminLogin,
+} from "../services/auth.service.js";
 
 import {
   setRefreshTokenCookie,
@@ -131,6 +134,45 @@ export const getMe = async (req: Request, res: Response): Promise<any> => {
     return res.status(500).json({
       success: false,
       message: "Failed to get user info",
+    });
+  }
+};
+
+// Admin Login
+export const adminLoginController = async (
+  req: Request,
+  res: Response,
+): Promise<any> => {
+  try {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({
+        success: false,
+        message: "Email and password are required",
+      });
+    }
+
+    const { accessToken, refreshToken, user } =
+      await adminLogin(email, password);
+
+    setRefreshTokenCookie(res, refreshToken);
+
+    return res.json({
+      success: true,
+      message: "Admin login successful",
+      accessToken,
+      user,
+    });
+  } catch (error) {
+    logger.error("Admin login error:", error);
+
+    return res.status(401).json({
+      success: false,
+      message:
+        error instanceof Error
+          ? error.message
+          : "Invalid admin credentials",
     });
   }
 };

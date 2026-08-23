@@ -13,7 +13,6 @@ import { healthCheck } from "./controller/health.controller.js";
 import { performanceMonitor } from './middleware/performance.middleware.js';
 import {
   apiLimiter,
-  aiLimiter,
   authLimiter,
   redisRateLimiter,
 } from "./middleware/rateLimiter.js";
@@ -46,7 +45,7 @@ app.use(Express.urlencoded({ extended: true, limit: "10mb" }));
 app.use(morgan("dev"));
 
 // Health Check Route
-app.get("/health", (req: Request, res: Response) => {
+app.get("/health", (_req: Request, res: Response) => {
   res.status(200).json({
     status: "OK",
     timestamp: new Date().toISOString(),

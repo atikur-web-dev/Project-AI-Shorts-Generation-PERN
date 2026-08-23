@@ -3,7 +3,7 @@ import { prisma } from "../../lib/prisma.js";
 import { logger } from "../../config/logger.js";
 import { saveSearchHistory, getSearchHistory, clearSearchHistory } from "../../services/searchHistory.service.js";
 
-export const getAdminLogs = async (req: Request, res: Response) => {
+export const getAdminLogs = async (_req: Request, res: Response) => {
   try {
     const logs = await prisma.adminLog.findMany({
       take: 50,

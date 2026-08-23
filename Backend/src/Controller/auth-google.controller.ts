@@ -7,7 +7,7 @@ import {
 import { setRefreshTokenCookie } from "../utils/cookies.js";
 import { logger } from "../config/logger.js";
 
-export const googleLogin = async (req: Request, res: Response): Promise<any> => {
+export const googleLogin = async (_req: Request, res: Response): Promise<any> => {
   try {
     console.log("Google login endpoint called");
     const url = getGoogleAuthUrl();

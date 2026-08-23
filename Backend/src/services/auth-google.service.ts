@@ -93,6 +93,8 @@ export const handleGoogleCallback = async (
       email: true,
       name: true,
       picture: true,
+      loginType: true,
+      role: true,
     },
   });
 

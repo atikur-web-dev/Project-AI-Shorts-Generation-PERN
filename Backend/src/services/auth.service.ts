@@ -1,7 +1,7 @@
 import { google } from "googleapis";
 import { prisma } from "../lib/prisma.js";
 import { config } from "../config/index.js";
-
+import bcrypt from "bcryptjs";
 import {
   generateAccessToken,
   generateRefreshToken,
@@ -230,5 +230,77 @@ export const rotateRefreshToken = async (
     accessToken,
     refreshToken: newRefreshToken,
     user: session.user,
+  };
+};
+
+export const adminLogin = async (
+  email: string,
+  password: string,
+): Promise<SessionData> => {
+  // Find admin user
+  const admin = await prisma.user.findUnique({
+    where: {
+      email,
+    },
+    select: {
+      id: true,
+      email: true,
+      name: true,
+      picture: true,
+      loginType: true,
+      role: true,
+      passwordHash: true,
+    },
+  });
+
+  // Admin does not exist
+  if (!admin || admin.role !== "ADMIN") {
+    throw new Error("Invalid admin credentials");
+  }
+
+  // Admin must have a password
+  if (!admin.passwordHash) {
+    throw new Error("Admin password is not configured");
+  }
+
+  // Verify password
+  const isPasswordValid = await bcrypt.compare(
+    password,
+    admin.passwordHash,
+  );
+
+  if (!isPasswordValid) {
+    throw new Error("Invalid admin credentials");
+  }
+
+  // Generate refresh token
+  const refreshToken = generateRefreshToken();
+  const hashedRefreshToken = hashToken(refreshToken);
+
+  // Create session
+  await prisma.session.create({
+    data: {
+      userId: admin.id,
+      refreshToken: hashedRefreshToken,
+      expiresAt: new Date(
+        Date.now() + 7 * 24 * 60 * 60 * 1000,
+      ),
+    },
+  });
+
+  // Generate access token
+  const accessToken = generateAccessToken(admin.id);
+
+  return {
+    accessToken,
+    refreshToken,
+    user: {
+      id: admin.id,
+      email: admin.email,
+      name: admin.name,
+      picture: admin.picture,
+      loginType: admin.loginType,
+      role: admin.role,
+    },
   };
 };

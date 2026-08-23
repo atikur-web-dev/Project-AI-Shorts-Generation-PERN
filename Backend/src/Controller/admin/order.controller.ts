@@ -5,7 +5,7 @@ import { createAdminLog } from "../../services/adminLog.service.js";
 
 const ORDER_STATUSES = ["pending", "completed", "failed"] as const;
 
-export const getAllOrders = async (req: Request, res: Response) => {
+export const getAllOrders = async (_req: Request, res: Response) => {
   try {
     const orders = await prisma.order.findMany({
       include: {

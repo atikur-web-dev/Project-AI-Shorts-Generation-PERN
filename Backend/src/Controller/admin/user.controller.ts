@@ -7,7 +7,7 @@ import { getPaginationOptions, buildPaginatedResponse } from "../../utils/pagina
 
 const ALLOWED_ROLES = ["USER", "ADMIN"] as const;
 
-export const getAllUsers = async (req: Request, res: Response) => {
+export const getAllUsers = async (_req: Request, res: Response) => {
   try {
     const users = await prisma.user.findMany({
       select: {

@@ -25,16 +25,17 @@ enum Role {
 }
 
 model User {
-  id        String    @id @default(uuid())
-  googleId  String?   @unique
-  githubId  String?   @unique
-  name      String
-  email     String    @unique
-  picture   String?
-  role      Role      @default(USER)
-  loginType loginType @default(google)
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  id           String    @id @default(uuid())
+  googleId     String?   @unique
+  githubId     String?   @unique
+  name         String
+  email        String    @unique
+  passwordHash String?
+  picture      String?
+  role         Role      @default(USER)
+  loginType    loginType @default(google)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 
   sessions         Session[]
   projects         Project[]

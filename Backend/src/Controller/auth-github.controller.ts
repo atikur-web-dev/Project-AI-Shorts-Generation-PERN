@@ -8,7 +8,7 @@ import { setRefreshTokenCookie } from "../utils/cookies.js";
 import { logger } from "../config/logger.js";
 
 
-export const githubLogin = async (req: Request, res: Response): Promise<any> => {
+export const githubLogin = async (_req: Request, res: Response): Promise<any> => {
   try {
     const url = getGitHubAuthUrl();
     return res.redirect(url);

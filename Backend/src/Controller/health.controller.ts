@@ -2,9 +2,9 @@
 import type { Request, Response } from "express";
 import { prisma } from "../lib/prisma.js";
 import { config } from "../config/index.js";
-import { logger } from "../config/logger.js";
 
-export const healthCheck = async (req: Request, res: Response) => {
+
+export const healthCheck = async (_req: Request, res: Response) => {
   try {
     // Check database
     await prisma.$queryRaw`SELECT 1`;

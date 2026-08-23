@@ -1,5 +1,7 @@
 // Backend/prisma/seed.ts
 import "dotenv/config";
+
+import bcrypt from "bcryptjs";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../src/generated/prisma/client";
 
@@ -12,6 +14,7 @@ const prisma = new PrismaClient({
 });
 
 async function main() {
+ 
   // Seed Subscription Plans
   const plans = [
     {
@@ -57,8 +60,13 @@ async function main() {
 
   console.log("Subscription plans seeded successfully");
 
+  
   // Seed Admin User
-  const adminEmail = "admin@aishorts.com";
+  const adminEmail = "atikuradmin@gmail.com";
+  const adminPassword = "atikur123";
+
+  // Hash admin password
+  const passwordHash = await bcrypt.hash(adminPassword, 10);
 
   const existingAdmin = await prisma.user.findUnique({
     where: {
@@ -71,15 +79,27 @@ async function main() {
       data: {
         email: adminEmail,
         name: "Super Admin",
-        googleId: "admin-google-id",
+        passwordHash,
         role: "ADMIN",
-        loginType: "google",
+        loginType: "email",
       },
     });
 
     console.log("Admin user created successfully");
   } else {
-    console.log("Admin user already exists");
+    await prisma.user.update({
+      where: {
+        id: existingAdmin.id,
+      },
+      data: {
+        name: "Super Admin",
+        passwordHash,
+        role: "ADMIN",
+        loginType: "email",
+      },
+    });
+
+    console.log("Admin user updated successfully");
   }
 
   console.log("Seeding completed successfully");

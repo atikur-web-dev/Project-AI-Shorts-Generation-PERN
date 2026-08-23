@@ -96,14 +96,14 @@ export const handleGitHubCallback = async (
       picture: githubUser.avatar_url || "",
       // Cast to any to avoid TypeScript error if the Prisma schema doesn't include githubId
       // (keeps intended behavior if the field exists at runtime)
-      ...( { githubId: String(githubUser.id) } as any ),
+      ...({ githubId: String(githubUser.id) } as any),
     },
     create: {
       email,
       name: githubUser.name || githubUser.login || "",
       picture: githubUser.avatar_url || "",
       // Cast to any to avoid TypeScript error if the Prisma schema doesn't include githubId
-      ...( { githubId: String(githubUser.id) } as any ),
+      ...({ githubId: String(githubUser.id) } as any),
       googleId: "",
       loginType: "github",
       userSubscription: {
@@ -122,6 +122,8 @@ export const handleGitHubCallback = async (
       email: true,
       name: true,
       picture: true,
+      loginType: true,
+      role: true,
     },
   });
 

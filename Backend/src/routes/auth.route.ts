@@ -1,5 +1,5 @@
-// src/routes/auth.route.ts
 import { Router } from "express";
+
 import {
   googleLogin,
   googleCallback,
@@ -8,26 +8,31 @@ import {
   logout,
   refreshToken,
   getMe,
-} from "../controller/index.js";  
+  adminLoginController,
+} from "../controller/index.js";
+
 import { authenticate } from "../middleware/auth.middleware.js";
 
-// Initialize the Express Router machine
+// Initialize the Express Router
 const router = Router();
 
 // Google routes
 router.get("/auth/google/login", googleLogin);
 router.get("/auth/google/callback", googleCallback);
 
-// Github routes
+// GitHub routes
 router.get("/auth/github/login", githubLogin);
 router.get("/auth/github/callback", githubCallback);
 
-// common routes
+// Common routes
 router.post("/auth/refresh", refreshToken);
 router.post("/auth/logout", logout);
+
+// Admin login
+router.post("/auth/admin/login", adminLoginController);
 
 // Protected routes
 router.get("/auth/me", authenticate, getMe);
 
-// Export the configured router instance so we can plug it into our main app.ts server file
+// Export the configured router
 export const authRouter = router;

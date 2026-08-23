@@ -50,7 +50,7 @@ export const getDashboardStats = async (req: Request, res: Response) => {
   }
 };
 
-export const getDashboardSummary = async (req: Request, res: Response) => {
+export const getDashboardSummary = async (_req: Request, res: Response) => {
   try {
     const stats = await prisma.$queryRaw<any[]>`
       SELECT 
