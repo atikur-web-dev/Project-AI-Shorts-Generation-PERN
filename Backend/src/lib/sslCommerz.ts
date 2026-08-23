@@ -11,7 +11,7 @@ export const initSSLCommerz = () => {
 };
 
 
-export const getPaymentData = (order: any, req: any) => {
+export const getPaymentData = (order: any) => {
   return {
     total_amount: order.amount,
     currency: "BDT",

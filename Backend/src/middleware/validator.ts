@@ -1,20 +1,26 @@
 // Backend/src/middleware/validator.ts
-import type { Request, Response, NextFunction } from "express";
-import { ZodType, ZodError } from "zod"; 
 
+import type { Request, Response, NextFunction } from "express";
+
+import { ZodType, ZodError } from "zod";
 
 export const validate = (Schema: ZodType) => {
-  return async (req: Request, res: Response, next: NextFunction) => {
+  return async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
     try {
       await Schema.parseAsync({
         body: req.body,
         query: req.query,
         params: req.params,
       });
-      next();
+
+      return next();
     } catch (error) {
       if (error instanceof ZodError) {
-        return res.status(400).json({
+        res.status(400).json({
           success: false,
           message: "Validation Failed",
           errors: error.issues.map((err) => ({
@@ -22,8 +28,11 @@ export const validate = (Schema: ZodType) => {
             message: err.message,
           })),
         });
+
+        return;
       }
-      next(error);
+
+      return next(error);
     }
   };
 };

@@ -10,11 +10,11 @@ import { readFileSync } from "fs";
 import { uploadBufferToCloudinary } from "./cloudinary.service.js";
 import { logger } from "../config/logger.js";
 import axios from "axios";
-import fs, { mkdirSync, rmSync } from "fs";
+import { mkdirSync, rmSync } from "fs";
 import path from "path";
 import { cloudinary } from "../lib/cloudinary.js";
 import type { Project } from "@prisma/client";
-import type { Express } from "express";
+// import type { Express } from "express";
 
 interface GenerateImageInput {
   userPrompt?: string;

@@ -10,12 +10,19 @@ export const isAdmin = async (
     const userId = req.user?.id;
 
     if (!userId) {
-      return res.status(401).json({ success: false, message: "Unauthorized" });
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized",
+      });
     }
 
     const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { role: true },
+      where: {
+        id: userId,
+      },
+      select: {
+        role: true,
+      },
     });
 
     if (!user || user.role !== "ADMIN") {
@@ -25,7 +32,7 @@ export const isAdmin = async (
       });
     }
 
-    next();
+    return next();
   } catch (error) {
     return res.status(500).json({
       success: false,

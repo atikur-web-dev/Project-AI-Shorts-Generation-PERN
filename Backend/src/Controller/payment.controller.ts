@@ -39,7 +39,7 @@ export const initiatePayment = async (req: Request, res: Response) => {
 
     // 4. Initialize SSLCommerz instance (instantiated cleanly with no args)
     const sslcz = initSSLCommerz();
-    const paymentData = getPaymentData(order, req);
+    const paymentData = getPaymentData(order);
 
     // 5. Send transaction details to the gateway
     const apiResponse = await sslcz.init(paymentData);
