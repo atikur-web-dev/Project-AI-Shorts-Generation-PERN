@@ -128,73 +128,155 @@ export const deleteUser = async (req: Request, res: Response) => {
 export const searchUsers = async (req: Request, res: Response) => {
   try {
     const options = getPaginationOptions(req.query);
-    const { page, limit, sortBy, sortOrder, search, filter } = options;
+
+    const {
+      page,
+      limit,
+      sortBy,
+      sortOrder,
+      search,
+      filter,
+    } = options;
 
     let whereClause = "WHERE 1=1";
     const params: any[] = [];
 
+    // Search by name or email
     if (search) {
-      whereClause += ` AND (u.name ILIKE $${params.length + 1} OR u.email ILIKE $${params.length + 2})`;
+      whereClause += `
+        AND (
+          u.name ILIKE $${params.length + 1}
+          OR u.email ILIKE $${params.length + 2}
+        )
+      `;
+
       params.push(`%${search}%`, `%${search}%`);
     }
 
+    // Filter by role
     if (filter.role) {
       whereClause += ` AND u.role = $${params.length + 1}`;
       params.push(filter.role);
     }
 
+    // Filter by login type
     if (filter.loginType) {
       whereClause += ` AND u."loginType" = $${params.length + 1}`;
       params.push(filter.loginType);
     }
 
+    // Filter by start date
     if (filter.startDate) {
       whereClause += ` AND u."createdAt" >= $${params.length + 1}`;
       params.push(new Date(filter.startDate));
     }
 
+    // Filter by end date
     if (filter.endDate) {
       whereClause += ` AND u."createdAt" <= $${params.length + 1}`;
       params.push(new Date(filter.endDate));
     }
 
-    const countResult = await prisma.$queryRawUnsafe<{ total: string }>(
-      `SELECT COUNT(*) as total FROM users u ${whereClause}`,
-      ...params
+    // Total count
+    const countResult = await prisma.$queryRawUnsafe<{ total: string }[]>(
+      `
+        SELECT COUNT(*)::text AS total
+        FROM "users" u
+        ${whereClause}
+      `,
+      ...params,
     );
 
     const total = Number(countResult[0]?.total) || 0;
+
+    // Pagination
     const offset = (page - 1) * limit;
 
+    // Whitelist sortable columns
+    const allowedSortColumns: Record<string, string> = {
+      name: 'u."name"',
+      email: 'u."email"',
+      role: 'u."role"',
+      loginType: 'u."loginType"',
+      createdAt: 'u."createdAt"',
+      project_count: "project_count",
+      order_count: "order_count",
+      total_spent: "total_spent",
+    };
+
+    const orderByColumn =
+      allowedSortColumns[sortBy] ?? 'u."createdAt"';
+
+    const orderDirection =
+      sortOrder === "asc" ? "ASC" : "DESC";
+
+    // Fetch users
     const data = await prisma.$queryRawUnsafe(
-      `SELECT 
-        u.id,
-        u.name,
-        u.email,
-        u.role,
-        u."loginType",
-        u.picture,
-        u."createdAt",
-        COUNT(DISTINCT p.id) as project_count,
-        COUNT(DISTINCT o.id) as order_count,
-        COALESCE(SUM(o.amount), 0) as total_spent
-      FROM users u
-      LEFT JOIN projects p ON p."userId" = u.id
-      LEFT JOIN orders o ON o."userId" = u.id AND o.status = 'completed'
-      ${whereClause}
-      GROUP BY u.id
-      ORDER BY "${sortBy}" ${sortOrder === "asc" ? "ASC" : "DESC"}
-      LIMIT ${limit} OFFSET ${offset}`,
-      ...params
+      `
+        SELECT
+          u.id,
+          u.name,
+          u.email,
+          u.role,
+          u."loginType",
+          u.picture,
+          u."createdAt",
+
+          COUNT(DISTINCT p.id)::int AS project_count,
+
+          COUNT(DISTINCT o.id)::int AS order_count,
+
+          COALESCE(SUM(o.amount), 0)::int AS total_spent
+
+        FROM "users" u
+
+        LEFT JOIN "Project" p
+          ON p."userId" = u.id
+
+        LEFT JOIN "orders" o
+          ON o."userId" = u.id
+          AND o.status = 'completed'
+
+        ${whereClause}
+
+        GROUP BY
+          u.id,
+          u.name,
+          u.email,
+          u.role,
+          u."loginType",
+          u.picture,
+          u."createdAt"
+
+        ORDER BY ${orderByColumn} ${orderDirection}
+
+        LIMIT ${limit}
+        OFFSET ${offset}
+      `,
+      ...params,
     );
 
-    const response = buildPaginatedResponse(data as any[], total, options);
-    return res.json({ success: true, ...response });
+    const response = buildPaginatedResponse(
+      data as any[],
+      total,
+      options,
+    );
+
+    return res.json({
+      success: true,
+      ...response,
+    });
   } catch (error) {
     logger.error("Search users error:", error);
-    return res.status(500).json({ success: false, message: "Failed to search users" });
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to search users",
+    });
   }
 };
+
+
 
 export const getUsersCursor = async (req: Request, res: Response) => {
   try {
