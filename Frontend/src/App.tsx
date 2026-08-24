@@ -10,6 +10,8 @@ import Callback from './pages/Callback';
 import AdminLogin from './pages/AdminLogin';
 import AdminDashboard from './pages/AdminDashboard';
 import LoadingSpinner from './components/LoadingSpinner';
+import AdminUsers from "./pages/AdminUsers";
+import AdminOrders from "./pages/AdminOrders";
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, loading } = useAuth();
@@ -63,6 +65,8 @@ function App() {
             <Route path="/create-project" element={<ProtectedRoute><CreateProject /></ProtectedRoute>} />
             <Route path="/admin-login" element={<AdminLogin />} />
             <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
+            <Route path="/admin/users" element={<AdminUsers />} />
+            <Route path="/admin/orders" element={<AdminOrders />} />
             <Route path="*" element={<Navigate to="/" />} />
           </Routes>
         </div>

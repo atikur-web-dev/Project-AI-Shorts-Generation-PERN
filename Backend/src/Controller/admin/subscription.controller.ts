@@ -315,3 +315,80 @@ export const updateSubscription = async (
     });
   }
 };
+
+export const deleteSubscription = async (
+  req: Request,
+  res: Response,
+) => {
+  try {
+    const subscriptionId = req.params.subscriptionId;
+
+    if (!subscriptionId) {
+      return res.status(400).json({
+        success: false,
+        message: "Subscription ID is required",
+      });
+    }
+
+    const existing = await prisma.$queryRaw<
+      Array<{
+        id: string;
+        name: string;
+      }>
+    >`
+      SELECT id, name
+      FROM "subscriptions"
+      WHERE id = ${subscriptionId}
+      LIMIT 1
+    `;
+
+    const subscription = existing[0];
+
+    if (!subscription) {
+      return res.status(404).json({
+        success: false,
+        message: "Subscription not found",
+      });
+    }
+
+    const subscriberCount = await prisma.$queryRaw<
+      Array<{ count: bigint }>
+    >`
+      SELECT COUNT(*) AS count
+      FROM "user_subscriptions"
+      WHERE "subscriptionId" = ${subscriptionId}
+    `;
+
+    const count = Number(subscriberCount[0]?.count ?? 0);
+
+    if (count > 0) {
+      return res.status(409).json({
+        success: false,
+        message:
+          "Cannot delete subscription because users are currently subscribed to it",
+        subscriberCount: count,
+      });
+    }
+
+    await prisma.$executeRaw`
+      DELETE FROM "subscriptions"
+      WHERE id = ${subscriptionId}
+    `;
+
+    return res.status(200).json({
+      success: true,
+      message: "Subscription deleted successfully",
+      data: {
+        id: subscription.id,
+        name: subscription.name,
+      },
+    });
+  } catch (error) {
+    logger.error("Delete subscription error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to delete subscription",
+    });
+  }
+};

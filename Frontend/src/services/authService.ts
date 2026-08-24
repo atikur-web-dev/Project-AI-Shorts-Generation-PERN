@@ -1,5 +1,5 @@
 import api from './api';
-import { AuthResponse, User } from '../types';
+import {  User } from '../types';
 
 export const authService = {
   loginWithGoogle: () => {
