@@ -4,8 +4,13 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { projectService } from "../services/projectService";
-import { Project } from "../types";
-import { Plus, Image, CheckCircle, Sparkles } from "lucide-react";
+import { orderService } from "../services/orderService";
+import type { Project } from "../types";
+import { Plus, Image, CheckCircle, Sparkles, CreditCard } from "lucide-react";
+import {
+  subscriptionService,
+  type Subscription,
+} from "../services/subscriptionService";
 
 const Dashboard: React.FC = () => {
   const { user, loading } = useAuth();
@@ -13,6 +18,13 @@ const Dashboard: React.FC = () => {
 
   const [projects, setProjects] = useState<Project[]>([]);
   const [loadingProjects, setLoadingProjects] = useState(true);
+
+  const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
+  const [loadingSubscriptions, setLoadingSubscriptions] = useState(true);
+
+  const [buyingSubscriptionId, setBuyingSubscriptionId] = useState<
+    string | null
+  >(null);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -22,30 +34,80 @@ const Dashboard: React.FC = () => {
 
     if (user) {
       loadProjects();
+      loadSubscriptions();
     }
   }, [user, loading, navigate]);
 
-const loadProjects = async () => {
-  try {
-    setLoadingProjects(true);
+  const loadProjects = async () => {
+    try {
+      setLoadingProjects(true);
 
-    const response = await projectService.getProjects();
+      const response = await projectService.getProjects();
 
-    console.log("GET PROJECTS RESPONSE:", response);
-    console.log("PROJECT DATA:", response.data);
+      console.log("GET PROJECTS RESPONSE:", response);
+      console.log("PROJECT DATA:", response.data);
 
-    if (response.success && Array.isArray(response.data)) {
-      setProjects(response.data);
-    } else {
+      if (response.success && Array.isArray(response.data)) {
+        setProjects(response.data);
+      } else {
+        setProjects([]);
+      }
+    } catch (error) {
+      console.error("Failed to load projects:", error);
       setProjects([]);
+    } finally {
+      setLoadingProjects(false);
     }
-  } catch (error) {
-    console.error("Failed to load projects:", error);
-    setProjects([]);
-  } finally {
-    setLoadingProjects(false);
-  }
-};
+  };
+
+  const loadSubscriptions = async () => {
+    try {
+      setLoadingSubscriptions(true);
+
+      const response = await subscriptionService.getSubscriptions();
+
+      console.log("GET SUBSCRIPTIONS RESPONSE:", response);
+
+      if (response.success && Array.isArray(response.data)) {
+        setSubscriptions(response.data);
+      } else {
+        setSubscriptions([]);
+      }
+    } catch (error) {
+      console.error("Failed to load subscriptions:", error);
+      setSubscriptions([]);
+    } finally {
+      setLoadingSubscriptions(false);
+    }
+  };
+
+  const handleBuySubscription = async (subscriptionId: string) => {
+    try {
+      setBuyingSubscriptionId(subscriptionId);
+
+      const response = await orderService.createOrder(subscriptionId);
+
+      console.log("CREATE ORDER RESPONSE:", response);
+
+      if (!response.success || !response.data?.orderId) {
+        throw new Error(response.message || "Failed to create order");
+      }
+
+      const orderId = response.data.orderId;
+      const paymentURL = `${import.meta.env.VITE_API_URL}/ssl/${orderId}`;
+      window.location.href = paymentURL;
+      
+    } catch (error) {
+      console.error("Subscription purchase failed:", error);
+
+      const message =
+        error instanceof Error ? error.message : "Failed to start payment";
+
+      alert(message);
+    } finally {
+      setBuyingSubscriptionId(null);
+    }
+  };
 
   if (loading || loadingProjects) {
     return (
@@ -129,6 +191,97 @@ const loadProjects = async () => {
               </div>
             </div>
           </div>
+        </div>
+
+        {/* Subscription Plans */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 mb-8">
+          <div className="p-6 border-b border-gray-100">
+            <div className="flex items-center gap-3">
+              <div className="bg-primary-100 p-3 rounded-lg">
+                <CreditCard className="text-primary-600" size={24} />
+              </div>
+
+              <div>
+                <h2 className="text-xl font-semibold text-gray-900">
+                  Buy AI Credits
+                </h2>
+
+                <p className="text-sm text-gray-500 mt-1">
+                  Choose a subscription plan and start creating AI-powered
+                  visuals.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {loadingSubscriptions ? (
+            <div className="p-10 flex justify-center">
+              <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary-600" />
+            </div>
+          ) : subscriptions.length === 0 ? (
+            <div className="p-10 text-center">
+              <CreditCard className="mx-auto text-gray-400 mb-4" size={42} />
+
+              <h3 className="text-lg font-medium text-gray-900 mb-2">
+                No subscription plans available
+              </h3>
+
+              <p className="text-gray-500">Please check again later.</p>
+            </div>
+          ) : (
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 p-6">
+              {subscriptions.map((subscription) => {
+                const isBuying = buyingSubscriptionId === subscription.id;
+
+                return (
+                  <div
+                    key={subscription.id}
+                    className="border border-gray-200 rounded-xl p-6 hover:shadow-md transition-shadow"
+                  >
+                    <div className="mb-5">
+                      <h3 className="text-xl font-bold text-gray-900">
+                        {subscription.name}
+                      </h3>
+
+                      <div className="mt-3">
+                        <span className="text-3xl font-bold text-primary-600">
+                          ৳{subscription.price}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="mb-6">
+                      <div className="flex items-center gap-2 text-gray-700">
+                        <Sparkles size={18} className="text-yellow-500" />
+
+                        <span>
+                          <strong>{subscription.credits}</strong> AI Credits
+                        </span>
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={() => handleBuySubscription(subscription.id)}
+                      disabled={isBuying}
+                      className="w-full flex items-center justify-center gap-2 bg-primary-600 text-white py-3 rounded-lg hover:bg-primary-700 transition-colors font-medium disabled:opacity-60 disabled:cursor-not-allowed"
+                    >
+                      {isBuying ? (
+                        <>
+                          <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent" />
+                          <span>Processing...</span>
+                        </>
+                      ) : (
+                        <>
+                          <CreditCard size={18} />
+                          <span>Buy Now</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         {/* Projects */}
