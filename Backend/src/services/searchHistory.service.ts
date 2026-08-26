@@ -1,3 +1,4 @@
+// Backend/src/services/searchHistory.service.ts
 import { prisma } from '../lib/prisma.js';
 
 export const saveSearchHistory = async (

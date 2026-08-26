@@ -1,17 +1,9 @@
+// Backend/src/controller/admin/dashboard.controller.ts
 import type { Request, Response } from "express";
-
 import { logger } from "../../config/logger.js";
 import { prisma } from "../../lib/prisma.js";
 import { CacheService } from "../../services/cache.service.js";
-// import { Prisma } from "../../generated/prisma/client.js";
 
-/**
- * GET /admin/stats
- *
- * Returns the main dashboard statistics and recent orders.
- *
- * Admin module uses RAW SQL intentionally.
- */
 export const getDashboardStats = async (
   req: Request,
   res: Response,
@@ -134,11 +126,7 @@ export const getDashboardStats = async (
   }
 };
 
-/**
- * GET /admin/dashboard
- *
- * Detailed dashboard summary.
- */
+
 export const getDashboardSummary = async (
   _req: Request,
   res: Response,
@@ -321,14 +309,6 @@ export const getDashboardSummary = async (
 };
 
 
-/**
- * GET /admin/stats/timeseries?period=daily
- *
- * Supported periods:
- * - daily   -> last 30 days
- * - weekly  -> last 7 days
- * - monthly -> last 30 days
- */
 export const getTimeSeriesStats = async (
   req: Request,
   res: Response,

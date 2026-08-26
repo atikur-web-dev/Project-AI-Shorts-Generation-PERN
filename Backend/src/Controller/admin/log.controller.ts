@@ -1,9 +1,7 @@
+// Backend/src/controller/admin/log.controller.ts
 import type { Request, Response } from "express";
-
 import { prisma } from "../../lib/prisma.js";
-
 import { logger } from "../../config/logger.js";
-
 import {
   saveSearchHistory,
   getSearchHistory,
