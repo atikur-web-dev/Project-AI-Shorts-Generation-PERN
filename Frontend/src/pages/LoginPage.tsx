@@ -1,3 +1,4 @@
+// Frontend/src/pages/LoginPage.tsx
 import React, { useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
