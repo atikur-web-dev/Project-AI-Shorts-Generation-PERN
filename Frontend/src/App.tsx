@@ -11,7 +11,7 @@ import { AuthProvider, useAuth } from "./context/AuthContext";
 
 import Navbar from "./components/Navbar";
 import LoadingSpinner from "./components/LoadingSpinner";
-
+import Subscriptions from "./pages/Subscriptions";
 import LandingPage from "./pages/LandingPage";
 import LoginPage from "./pages/LoginPage";
 import Dashboard from "./pages/Dashboard";
@@ -78,10 +78,7 @@ function App() {
 
           <Routes>
             {/* Public Routes */}
-            <Route
-              path="/"
-              element={<LandingPage />}
-            />
+            <Route path="/" element={<LandingPage />} />
 
             <Route
               path="/login"
@@ -92,10 +89,7 @@ function App() {
               }
             />
 
-            <Route
-              path="/callback"
-              element={<Callback />}
-            />
+            <Route path="/callback" element={<Callback />} />
 
             {/* User Protected Routes */}
             <Route
@@ -117,10 +111,7 @@ function App() {
             />
 
             {/* Admin Authentication */}
-            <Route
-              path="/admin-login"
-              element={<AdminLogin />}
-            />
+            <Route path="/admin-login" element={<AdminLogin />} />
 
             {/* Admin Protected Routes */}
             <Route
@@ -167,12 +158,9 @@ function App() {
                 </AdminRoute>
               }
             />
-
+            <Route path="/subscriptions" element={<Subscriptions />} />
             {/* Unknown Routes */}
-            <Route
-              path="*"
-              element={<Navigate to="/" replace />}
-            />
+            <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </div>
       </Router>

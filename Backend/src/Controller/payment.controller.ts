@@ -44,6 +44,12 @@ export const initiatePayment = async (req: Request, res: Response) => {
 
     // 5. Send transaction details to the gateway
     const apiResponse = await sslcz.init(paymentData);
+    logger.info("SSLCommerz API Response:");
+    logger.info(JSON.stringify(apiResponse, null, 2));
+
+    console.log("========== SSLCommerz Response ==========");
+    console.log(JSON.stringify(apiResponse, null, 2));
+    console.log("=========================================");
 
     // 6. Safeguard extracting the Gateway Redirect URL
     const gatewayURL = Array.isArray(apiResponse.GatewayPageURL)

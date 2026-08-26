@@ -36,7 +36,6 @@ export const getPaymentData = (order: any) => {
     cus_postcode: "1000",
     cus_country: "Bangladesh",
     cus_phone: "01711111111",
-    cus_fax: "01711111111",
 
     ship_name: order.user?.name || "Customer",
     ship_add1: "Dhaka",

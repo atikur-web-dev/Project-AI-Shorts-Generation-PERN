@@ -1,7 +1,15 @@
+// Frontend/src/pages/LandingPage.tsx
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { Sparkles, Image, Zap, Shield } from "lucide-react";
+import {
+  Sparkles,
+  Image,
+  Zap,
+  Shield,
+  CreditCard,
+  ArrowRight,
+} from "lucide-react";
 
 const LandingPage: React.FC = () => {
   const { user } = useAuth();
@@ -13,6 +21,10 @@ const LandingPage: React.FC = () => {
     } else {
       navigate("/login");
     }
+  };
+
+  const handleSubscriptionPlans = () => {
+    navigate("/subscriptions");
   };
 
   return (
@@ -38,15 +50,30 @@ const LandingPage: React.FC = () => {
             professional visuals for your brand, products, and marketing campaigns.
           </p>
 
-          <button
-            onClick={handleGetStarted}
-            className="bg-primary-600 text-white px-8 py-4 rounded-lg text-lg font-semibold hover:bg-primary-700 transition-colors shadow-lg"
-          >
-            Get Started Free
-          </button>
+          {/* CTA Buttons */}
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+            {/* Free Trial */}
+            <button
+              onClick={handleGetStarted}
+              className="inline-flex items-center justify-center gap-2 bg-primary-600 text-white px-8 py-4 rounded-lg text-lg font-semibold hover:bg-primary-700 transition-colors shadow-lg"
+            >
+              <Sparkles size={20} />
+              Start Free Trial
+            </button>
+
+            {/* Subscription Plans */}
+            <button
+              onClick={handleSubscriptionPlans}
+              className="inline-flex items-center justify-center gap-2 bg-white text-primary-600 border-2 border-primary-600 px-8 py-4 rounded-lg text-lg font-semibold hover:bg-primary-50 transition-colors"
+            >
+              <CreditCard size={20} />
+              View Subscription Plans
+              <ArrowRight size={18} />
+            </button>
+          </div>
 
           <p className="text-sm text-gray-500 mt-4">
-            Start with 30 free AI credits
+            Start with 30 free AI credits or choose a subscription plan.
           </p>
         </div>
 
@@ -56,10 +83,7 @@ const LandingPage: React.FC = () => {
           {/* Feature 1 */}
           <div className="bg-white p-8 rounded-xl shadow-md border border-gray-100">
             <div className="bg-primary-100 w-12 h-12 rounded-lg flex items-center justify-center mb-4">
-              <Sparkles
-                className="text-primary-600"
-                size={24}
-              />
+              <Sparkles className="text-primary-600" size={24} />
             </div>
 
             <h3 className="text-xl font-semibold text-gray-900 mb-2">
@@ -75,10 +99,7 @@ const LandingPage: React.FC = () => {
           {/* Feature 2 */}
           <div className="bg-white p-8 rounded-xl shadow-md border border-gray-100">
             <div className="bg-primary-100 w-12 h-12 rounded-lg flex items-center justify-center mb-4">
-              <Image
-                className="text-primary-600"
-                size={24}
-              />
+              <Image className="text-primary-600" size={24} />
             </div>
 
             <h3 className="text-xl font-semibold text-gray-900 mb-2">
@@ -94,10 +115,7 @@ const LandingPage: React.FC = () => {
           {/* Feature 3 */}
           <div className="bg-white p-8 rounded-xl shadow-md border border-gray-100">
             <div className="bg-primary-100 w-12 h-12 rounded-lg flex items-center justify-center mb-4">
-              <Zap
-                className="text-primary-600"
-                size={24}
-              />
+              <Zap className="text-primary-600" size={24} />
             </div>
 
             <h3 className="text-xl font-semibold text-gray-900 mb-2">
@@ -176,42 +194,49 @@ const LandingPage: React.FC = () => {
 
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
 
+            {/* E-Commerce */}
             <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm text-center">
               <h3 className="font-semibold text-gray-900 mb-2">
                 E-Commerce
               </h3>
+
               <p className="text-sm text-gray-600">
                 Create professional product visuals for your online store.
               </p>
             </div>
 
+            {/* Social Media */}
             <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm text-center">
               <h3 className="font-semibold text-gray-900 mb-2">
                 Social Media
               </h3>
+
               <p className="text-sm text-gray-600">
                 Generate engaging visuals for Instagram, Facebook and more.
               </p>
             </div>
 
+            {/* Advertising */}
             <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm text-center">
               <h3 className="font-semibold text-gray-900 mb-2">
                 Advertising
               </h3>
+
               <p className="text-sm text-gray-600">
                 Create campaign-ready images for your marketing efforts.
               </p>
             </div>
 
+            {/* Brand Content */}
             <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm text-center">
               <h3 className="font-semibold text-gray-900 mb-2">
                 Brand Content
               </h3>
+
               <p className="text-sm text-gray-600">
                 Produce consistent visual content for your brand.
               </p>
             </div>
-
           </div>
         </div>
 
@@ -237,7 +262,6 @@ const LandingPage: React.FC = () => {
             Start Creating Now
           </button>
         </div>
-
       </div>
     </div>
   );

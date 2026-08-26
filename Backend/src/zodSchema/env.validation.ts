@@ -28,7 +28,10 @@ export const envSchema = z.object({
   // SSLCommerz
   SSL_STORE_ID: z.string().min(1),
   SSL_STORE_PASSWORD: z.string().min(1),
-  SSL_IS_LIVE: z.coerce.boolean().default(false),
+  SSL_IS_LIVE: z
+    .enum(["true", "false"])
+    .transform((value) => value === "true")
+    .default(false),
 
   // Payment URLs
   SSL_SUCCESS_URL: z.string().url(),
