@@ -1,9 +1,8 @@
-// Frontend/src/services/api.ts
+
 import axios from "axios";
 
 const API_BASE_URL =
-  import.meta.env.VITE_API_URL ||
-  "http://localhost:8000/api/v1";
+  import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1";
 
 console.log("API Base URL:", API_BASE_URL);
 
@@ -15,16 +14,21 @@ const api = axios.create({
   withCredentials: true,
 });
 
-// Request interceptor to add access token
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem("accessToken");
+// Request interceptor
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem("accessToken");
 
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
 
-  return config;
-});
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  },
+);
 
 // Response interceptor
 api.interceptors.response.use(
@@ -33,11 +37,11 @@ api.interceptors.response.use(
   async (error) => {
     console.error("API Error:", error);
 
-    if (error.response?.status === 401) {
-      const requestUrl = error.config?.url || "";
+    const status = error.response?.status;
+    const requestUrl = error.config?.url || "";
 
-      // Do not redirect when the failed request itself
-      // is an authentication endpoint.
+    if (status === 401) {
+      // Authentication endpoints should handle their own errors.
       const isAuthRequest =
         requestUrl.includes("/auth/admin/login") ||
         requestUrl.includes("/auth/refresh") ||
@@ -46,12 +50,24 @@ api.interceptors.response.use(
         requestUrl.includes("/auth/github");
 
       if (!isAuthRequest) {
-        localStorage.removeItem("accessToken");
-        localStorage.removeItem("isAdmin");
-        localStorage.removeItem("adminEmail");
-        localStorage.removeItem("adminUser");
+        const isAdminRequest =
+          requestUrl.includes("/admin/");
 
-        window.location.href = "/login";
+        // Clear invalid authentication data.
+        localStorage.removeItem("accessToken");
+
+        if (isAdminRequest) {
+          // Clear admin-specific session data.
+          localStorage.removeItem("isAdmin");
+          localStorage.removeItem("adminEmail");
+          localStorage.removeItem("adminUser");
+
+          // Send admin back to admin login.
+          window.location.href = "/admin-login";
+        } else {
+          // Normal user session expired.
+          window.location.href = "/login";
+        }
       }
     }
 

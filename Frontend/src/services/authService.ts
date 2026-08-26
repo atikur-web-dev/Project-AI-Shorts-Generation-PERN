@@ -1,32 +1,72 @@
 // Frontend/src/services/authService.ts
 import api from './api';
-import {  User } from '../types';
+
+import { User } from '../types';
 
 export const authService = {
   loginWithGoogle: () => {
-    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
+    const apiUrl =
+      import.meta.env.VITE_API_URL ||
+      'http://localhost:8000/api/v1';
+
     const loginUrl = `${apiUrl}/auth/google/login`;
+
     console.log('Attempting Google login to:', loginUrl);
-    console.log('VITE_API_URL from env:', import.meta.env.VITE_API_URL);
+    console.log(
+      'VITE_API_URL from env:',
+      import.meta.env.VITE_API_URL,
+    );
+
     window.location.href = loginUrl;
   },
 
   loginWithGitHub: () => {
-    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
+    const apiUrl =
+      import.meta.env.VITE_API_URL ||
+      'http://localhost:8000/api/v1';
+
     const loginUrl = `${apiUrl}/auth/github/login`;
+
     console.log('Attempting GitHub login to:', loginUrl);
-    console.log('VITE_API_URL from env:', import.meta.env.VITE_API_URL);
+    console.log(
+      'VITE_API_URL from env:',
+      import.meta.env.VITE_API_URL,
+    );
+
     window.location.href = loginUrl;
+  },
+
+  adminLogin: async (
+    email: string,
+    password: string,
+  ): Promise<{
+    success: boolean;
+    message: string;
+    accessToken?: string;
+    user?: User;
+  }> => {
+    const response = await api.post('/auth/admin/login', {
+      email,
+      password,
+    });
+
+    return response.data;
   },
 
   logout: async () => {
     await api.post('/auth/logout');
+
     localStorage.removeItem('accessToken');
+
     window.location.href = '/';
   },
 
-  getMe: async (): Promise<{ success: boolean; user?: User }> => {
+  getMe: async (): Promise<{
+    success: boolean;
+    user?: User;
+  }> => {
     const response = await api.get('/auth/me');
+
     return response.data;
   },
 

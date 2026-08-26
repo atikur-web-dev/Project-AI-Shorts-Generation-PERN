@@ -1,5 +1,5 @@
+// Frontend/src/App.tsx
 import React from "react";
-
 import {
   BrowserRouter as Router,
   Routes,
@@ -8,9 +8,9 @@ import {
 } from "react-router-dom";
 
 import { AuthProvider, useAuth } from "./context/AuthContext";
-
 import Navbar from "./components/Navbar";
 import LoadingSpinner from "./components/LoadingSpinner";
+
 import Subscriptions from "./pages/Subscriptions";
 import LandingPage from "./pages/LandingPage";
 import LoginPage from "./pages/LoginPage";
@@ -60,9 +60,15 @@ const PublicRoute: React.FC<{
 const AdminRoute: React.FC<{
   children: React.ReactNode;
 }> = ({ children }) => {
-  const isAdmin = localStorage.getItem("isAdmin");
+  const { user, loading } = useAuth();
 
-  if (!isAdmin) {
+  const accessToken = localStorage.getItem("accessToken");
+
+  if (loading) {
+    return <LoadingSpinner />;
+  }
+
+  if (!accessToken || !user || user.role !== "ADMIN") {
     return <Navigate to="/admin-login" replace />;
   }
 
@@ -78,7 +84,11 @@ function App() {
 
           <Routes>
             {/* Public Routes */}
-            <Route path="/" element={<LandingPage />} />
+
+            <Route
+              path="/"
+              element={<LandingPage />}
+            />
 
             <Route
               path="/login"
@@ -89,9 +99,13 @@ function App() {
               }
             />
 
-            <Route path="/callback" element={<Callback />} />
+            <Route
+              path="/callback"
+              element={<Callback />}
+            />
 
             {/* User Protected Routes */}
+
             <Route
               path="/dashboard"
               element={
@@ -111,9 +125,16 @@ function App() {
             />
 
             {/* Admin Authentication */}
-            <Route path="/admin-login" element={<AdminLogin />} />
+
+            <Route
+              path="/admin-login"
+              element={<AdminLogin />}
+            />
 
             {/* Admin Protected Routes */}
+
+            {/* Main Admin Dashboard */}
+
             <Route
               path="/admin"
               element={
@@ -122,6 +143,19 @@ function App() {
                 </AdminRoute>
               }
             />
+
+            {/* Dashboard Alias */}
+
+            <Route
+              path="/admin/dashboard"
+              element={
+                <AdminRoute>
+                  <AdminDashboard />
+                </AdminRoute>
+              }
+            />
+
+            {/* Users */}
 
             <Route
               path="/admin/users"
@@ -132,6 +166,8 @@ function App() {
               }
             />
 
+            {/* Orders */}
+
             <Route
               path="/admin/orders"
               element={
@@ -140,6 +176,8 @@ function App() {
                 </AdminRoute>
               }
             />
+
+            {/* Subscriptions */}
 
             <Route
               path="/admin/subscriptions"
@@ -150,6 +188,8 @@ function App() {
               }
             />
 
+            {/* Projects */}
+
             <Route
               path="/admin/projects"
               element={
@@ -158,9 +198,20 @@ function App() {
                 </AdminRoute>
               }
             />
-            <Route path="/subscriptions" element={<Subscriptions />} />
+
+            {/* User Subscriptions */}
+
+            <Route
+              path="/subscriptions"
+              element={<Subscriptions />}
+            />
+
             {/* Unknown Routes */}
-            <Route path="*" element={<Navigate to="/" replace />} />
+
+            <Route
+              path="*"
+              element={<Navigate to="/" replace />}
+            />
           </Routes>
         </div>
       </Router>

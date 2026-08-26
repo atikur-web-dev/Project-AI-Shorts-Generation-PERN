@@ -1,25 +1,14 @@
-// Frontend/src/pages/AdminLogin.tsx
+
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Shield } from "lucide-react";
-import api from "../services/api";
+import { Shield, Info } from "lucide-react";
 
-interface AdminLoginResponse {
-  success: boolean;
-  message: string;
-  accessToken?: string;
-  user?: {
-    id: string;
-    email: string;
-    name: string | null;
-    picture: string | null;
-    loginType: string;
-    role: string;
-  };
-}
+import { useAuth } from "../context/AuthContext";
+import api from "../services/api";
 
 const AdminLogin: React.FC = () => {
   const navigate = useNavigate();
+  const { login } = useAuth();
 
   const [credentials, setCredentials] = useState({
     email: "admin@aishorts.com",
@@ -29,50 +18,54 @@ const AdminLogin: React.FC = () => {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (
+    e: React.FormEvent<HTMLFormElement>,
+  ) => {
     e.preventDefault();
 
     setError("");
     setLoading(true);
 
     try {
-      const response = await api.post<AdminLoginResponse>(
+      const response = await api.post(
         "/auth/admin/login",
-        {
-          email: credentials.email.trim(),
-          password: credentials.password,
-        },
+        credentials,
       );
 
-      const data = response.data;
-
-      if (!data.success || !data.accessToken || !data.user) {
+      if (!response.data.success) {
         throw new Error(
-          data.message || "Admin login failed",
+          response.data.message || "Admin login failed",
         );
       }
 
-      // Extra frontend safety check.
-      // Backend already verifies that the user has ADMIN role.
-      if (data.user.role !== "ADMIN") {
-        throw new Error("You are not authorized as an admin.");
+      const { accessToken, user } = response.data;
+
+      if (!accessToken || !user) {
+        throw new Error(
+          "Invalid response received from server",
+        );
       }
 
-      // Store authentication information
-      localStorage.setItem("accessToken", data.accessToken);
-      localStorage.setItem("isAdmin", "true");
-      localStorage.setItem("adminEmail", data.user.email);
-      localStorage.setItem("adminUser", JSON.stringify(data.user));
+      // Store admin authentication through AuthContext
+      login(user, accessToken);
 
-      // Redirect to admin dashboard
+      // Keep admin information locally for UI purposes
+      localStorage.setItem(
+        "adminUser",
+        JSON.stringify(user),
+      );
+
+      localStorage.setItem("isAdmin", "true");
+      localStorage.setItem("adminEmail", user.email);
+
       navigate("/admin");
-    } catch (err: any) {
-      console.error("Admin login error:", err);
+    } catch (error: any) {
+      console.error("Admin login error:", error);
 
       setError(
-        err.response?.data?.message ||
-          err.message ||
-          "Admin login failed. Please try again.",
+        error.response?.data?.message ||
+          error.message ||
+          "Invalid admin credentials",
       );
     } finally {
       setLoading(false);
@@ -83,6 +76,7 @@ const AdminLogin: React.FC = () => {
     <div className="min-h-screen bg-gradient-to-b from-primary-50 to-white flex items-center justify-center px-4">
       <div className="max-w-md w-full">
         <div className="bg-white rounded-2xl shadow-xl p-8">
+
           {/* Header */}
           <div className="text-center mb-8">
             <div className="bg-primary-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -108,15 +102,11 @@ const AdminLogin: React.FC = () => {
           >
             {/* Email */}
             <div>
-              <label
-                htmlFor="email"
-                className="block text-sm font-medium text-gray-700 mb-2"
-              >
+              <label className="block text-sm font-medium text-gray-700 mb-2">
                 Admin Email
               </label>
 
               <input
-                id="email"
                 type="email"
                 value={credentials.email}
                 onChange={(e) =>
@@ -126,24 +116,19 @@ const AdminLogin: React.FC = () => {
                   }))
                 }
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
-                placeholder="admin@aishorts.com"
-                disabled={loading}
-                autoComplete="email"
+                placeholder="Enter admin email"
                 required
+                disabled={loading}
               />
             </div>
 
             {/* Password */}
             <div>
-              <label
-                htmlFor="password"
-                className="block text-sm font-medium text-gray-700 mb-2"
-              >
+              <label className="block text-sm font-medium text-gray-700 mb-2">
                 Password
               </label>
 
               <input
-                id="password"
                 type="password"
                 value={credentials.password}
                 onChange={(e) =>
@@ -154,9 +139,8 @@ const AdminLogin: React.FC = () => {
                 }
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
                 placeholder="Enter admin password"
-                disabled={loading}
-                autoComplete="current-password"
                 required
+                disabled={loading}
               />
             </div>
 
@@ -167,7 +151,7 @@ const AdminLogin: React.FC = () => {
               </div>
             )}
 
-            {/* Submit */}
+            {/* Login Button */}
             <button
               type="submit"
               disabled={loading}
@@ -177,6 +161,50 @@ const AdminLogin: React.FC = () => {
                 ? "Logging in..."
                 : "Login to Admin Dashboard"}
             </button>
+
+            {/* Public Demo Credentials */}
+            <div className="mt-5 rounded-xl border border-blue-200 bg-blue-50 p-4">
+              <div className="flex items-start gap-3">
+                <Info
+                  size={20}
+                  className="text-blue-600 mt-0.5 flex-shrink-0"
+                />
+
+                <div className="text-sm">
+                  <h3 className="font-semibold text-blue-900 mb-2">
+                    Demo Admin Credentials
+                  </h3>
+
+                  <div className="space-y-1 text-blue-900">
+                    <p>
+                      <span className="font-medium">
+                        Email:
+                      </span>{" "}
+                      <span className="font-semibold">
+                        admin@aishorts.com
+                      </span>
+                    </p>
+
+                    <p>
+                      <span className="font-medium">
+                        Password:
+                      </span>{" "}
+                      <span className="font-semibold">
+                        admin123
+                      </span>
+                    </p>
+                  </div>
+
+                  <p className="mt-3 text-xs leading-relaxed text-blue-800">
+                    These credentials are intentionally displayed
+                    publicly for demonstration and testing purposes.
+                    This is a demo admin account provided so reviewers
+                    and visitors can directly access and test the
+                    admin dashboard.
+                  </p>
+                </div>
+              </div>
+            </div>
           </form>
 
           {/* Back to Home */}
@@ -184,12 +212,12 @@ const AdminLogin: React.FC = () => {
             <button
               type="button"
               onClick={() => navigate("/")}
-              disabled={loading}
-              className="text-primary-600 hover:text-primary-700 font-medium disabled:opacity-50"
+              className="text-primary-600 hover:text-primary-700 font-medium"
             >
               ← Back to Home
             </button>
           </div>
+
         </div>
       </div>
     </div>
