@@ -1,13 +1,16 @@
-// Frontend/src/App.tsx
+
 import React from "react";
+
 import {
   BrowserRouter as Router,
   Routes,
   Route,
   Navigate,
+  useLocation,
 } from "react-router-dom";
 
 import { AuthProvider, useAuth } from "./context/AuthContext";
+
 import Navbar from "./components/Navbar";
 import LoadingSpinner from "./components/LoadingSpinner";
 
@@ -25,6 +28,9 @@ import AdminOrders from "./pages/AdminOrders";
 import AdminSubscriptions from "./pages/AdminSubscriptions";
 import AdminProjects from "./pages/AdminProjects";
 
+/**
+ * Protected routes for normal users.
+ */
 const ProtectedRoute: React.FC<{
   children: React.ReactNode;
 }> = ({ children }) => {
@@ -41,6 +47,10 @@ const ProtectedRoute: React.FC<{
   return <>{children}</>;
 };
 
+/**
+ * Routes that should only be accessible
+ * when the user is NOT already logged in.
+ */
 const PublicRoute: React.FC<{
   children: React.ReactNode;
 }> = ({ children }) => {
@@ -57,33 +67,66 @@ const PublicRoute: React.FC<{
   return <>{children}</>;
 };
 
+/**
+ * Protected routes for administrators.
+ *
+ * Do NOT rely only on localStorage isAdmin.
+ * The actual authenticated user and role from AuthContext
+ * are used as the primary authorization check.
+ */
 const AdminRoute: React.FC<{
   children: React.ReactNode;
 }> = ({ children }) => {
   const { user, loading } = useAuth();
 
-  const accessToken = localStorage.getItem("accessToken");
-
   if (loading) {
     return <LoadingSpinner />;
   }
 
-  if (!accessToken || !user || user.role !== "ADMIN") {
+  if (!user) {
     return <Navigate to="/admin-login" replace />;
   }
 
+  if (user.role !== "ADMIN") {
+    return <Navigate to="/dashboard" replace />;
+  }
+
   return <>{children}</>;
+};
+
+/**
+ * Controls whether the normal user Navbar should be displayed.
+ *
+ * Admin pages have their own dashboard navigation/layout,
+ * so the public Navbar is hidden there.
+ */
+const AppLayout: React.FC<{
+  children: React.ReactNode;
+}> = ({ children }) => {
+  const location = useLocation();
+
+  const isAdminRoute =
+    location.pathname.startsWith("/admin") ||
+    location.pathname === "/admin-login";
+
+  return (
+    <div className="min-h-screen">
+      {!isAdminRoute && <Navbar />}
+
+      {children}
+    </div>
+  );
 };
 
 function App() {
   return (
     <AuthProvider>
       <Router>
-        <div className="min-h-screen">
-          <Navbar />
-
+        <AppLayout>
           <Routes>
-            {/* Public Routes */}
+            {/* =========================
+                PUBLIC ROUTES
+            ========================== */}
 
             <Route
               path="/"
@@ -104,7 +147,9 @@ function App() {
               element={<Callback />}
             />
 
-            {/* User Protected Routes */}
+            {/* =========================
+                USER PROTECTED ROUTES
+            ========================== */}
 
             <Route
               path="/dashboard"
@@ -124,17 +169,31 @@ function App() {
               }
             />
 
-            {/* Admin Authentication */}
+            <Route
+              path="/subscriptions"
+              element={
+                <ProtectedRoute>
+                  <Subscriptions />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* =========================
+                ADMIN AUTHENTICATION
+            ========================== */}
 
             <Route
               path="/admin-login"
-              element={<AdminLogin />}
+              element={
+                <AdminLogin />
+              }
             />
 
-            {/* Admin Protected Routes */}
+            {/* =========================
+                ADMIN PROTECTED ROUTES
+            ========================== */}
 
             {/* Main Admin Dashboard */}
-
             <Route
               path="/admin"
               element={
@@ -144,8 +203,7 @@ function App() {
               }
             />
 
-            {/* Dashboard Alias */}
-
+            {/* Admin Dashboard Alias */}
             <Route
               path="/admin/dashboard"
               element={
@@ -155,8 +213,7 @@ function App() {
               }
             />
 
-            {/* Users */}
-
+            {/* Admin Users */}
             <Route
               path="/admin/users"
               element={
@@ -166,8 +223,7 @@ function App() {
               }
             />
 
-            {/* Orders */}
-
+            {/* Admin Orders */}
             <Route
               path="/admin/orders"
               element={
@@ -177,8 +233,7 @@ function App() {
               }
             />
 
-            {/* Subscriptions */}
-
+            {/* Admin Subscriptions */}
             <Route
               path="/admin/subscriptions"
               element={
@@ -188,8 +243,7 @@ function App() {
               }
             />
 
-            {/* Projects */}
-
+            {/* Admin Projects */}
             <Route
               path="/admin/projects"
               element={
@@ -199,21 +253,18 @@ function App() {
               }
             />
 
-            {/* User Subscriptions */}
-
-            <Route
-              path="/subscriptions"
-              element={<Subscriptions />}
-            />
-
-            {/* Unknown Routes */}
+            {/* =========================
+                UNKNOWN ROUTES
+            ========================== */}
 
             <Route
               path="*"
-              element={<Navigate to="/" replace />}
+              element={
+                <Navigate to="/" replace />
+              }
             />
           </Routes>
-        </div>
+        </AppLayout>
       </Router>
     </AuthProvider>
   );

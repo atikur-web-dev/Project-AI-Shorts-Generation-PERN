@@ -2,7 +2,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Shield, Info } from "lucide-react";
-
 import { useAuth } from "../context/AuthContext";
 import api from "../services/api";
 
@@ -18,19 +17,14 @@ const AdminLogin: React.FC = () => {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = async (
-    e: React.FormEvent<HTMLFormElement>,
-  ) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
     setError("");
     setLoading(true);
 
     try {
-      const response = await api.post(
-        "/auth/admin/login",
-        credentials,
-      );
+      const response = await api.post("/auth/admin/login", credentials);
 
       if (!response.data.success) {
         throw new Error(
@@ -41,20 +35,19 @@ const AdminLogin: React.FC = () => {
       const { accessToken, user } = response.data;
 
       if (!accessToken || !user) {
-        throw new Error(
-          "Invalid response received from server",
-        );
+        throw new Error("Invalid admin login response");
       }
 
-      // Store admin authentication through AuthContext
+      // Make sure the returned account is actually an admin.
+      if (user.role !== "ADMIN") {
+        throw new Error("Admin access is not allowed for this account");
+      }
+
+      // Update AuthContext + store access token.
       login(user, accessToken);
 
-      // Keep admin information locally for UI purposes
-      localStorage.setItem(
-        "adminUser",
-        JSON.stringify(user),
-      );
-
+      // Admin-specific session markers.
+      localStorage.setItem("adminUser", JSON.stringify(user));
       localStorage.setItem("isAdmin", "true");
       localStorage.setItem("adminEmail", user.email);
 
@@ -198,9 +191,9 @@ const AdminLogin: React.FC = () => {
                   <p className="mt-3 text-xs leading-relaxed text-blue-800">
                     These credentials are intentionally displayed
                     publicly for demonstration and testing purposes.
-                    This is a demo admin account provided so reviewers
-                    and visitors can directly access and test the
-                    admin dashboard.
+                    This is a demo administrator account provided so
+                    reviewers and visitors can directly access and
+                    test the admin dashboard.
                   </p>
                 </div>
               </div>

@@ -1,14 +1,17 @@
+
 import { Router } from "express";
 
 import { authenticate } from "../middleware/auth.middleware.js";
 import { isAdmin } from "../middleware/admin.middleware.js";
 
+// Dashboard
 import {
   getDashboardStats,
   getDashboardSummary,
   getTimeSeriesStats,
 } from "../controller/admin/dashboard.controller.js";
 
+// Users
 import {
   getAllUsers,
   updateUserRole,
@@ -17,11 +20,13 @@ import {
   getUsersCursor,
 } from "../controller/admin/user.controller.js";
 
+// Orders
 import {
   getAllOrders,
   updateOrderStatus,
 } from "../controller/admin/order.controller.js";
 
+// Subscriptions
 import {
   getAllSubscriptions,
   createSubscription,
@@ -29,6 +34,7 @@ import {
   deleteSubscription,
 } from "../controller/admin/subscription.controller.js";
 
+// Projects
 import {
   getAllProjects,
   getProjectById,
@@ -36,6 +42,7 @@ import {
   getProjectAnalytics,
 } from "../controller/admin/project.controller.js";
 
+// Reports
 import {
   getRevenueReport,
   getUserActivityReport,
@@ -43,6 +50,7 @@ import {
   exportReport,
 } from "../controller/admin/report.controller.js";
 
+// Logs
 import {
   getAdminLogs,
   searchUsersBasic,
@@ -52,105 +60,271 @@ import {
 
 const router = Router();
 
-router.use(authenticate, isAdmin);
+/*
+|--------------------------------------------------------------------------
+| Admin Authentication & Authorization
+|--------------------------------------------------------------------------
+|
+| Every route in this router requires:
+|
+| 1. A valid JWT access token
+| 2. An authenticated user
+| 3. ADMIN role
+|
+*/
 
-// Dashboard
-router.get("/admin/stats", getDashboardStats);
-router.get("/admin/dashboard", getDashboardSummary);
-router.get("/admin/stats/timeseries", getTimeSeriesStats);
+router.use(authenticate);
+router.use(isAdmin);
 
-// Users
-router.get("/admin/users", getAllUsers);
-router.get("/admin/users/search", searchUsers);
-router.get("/admin/users/basic-search", searchUsersBasic);
-router.get("/admin/users/cursor", getUsersCursor);
-router.patch("/admin/users/:userId/role", updateUserRole);
-router.delete("/admin/users/:userId", deleteUser);
+/*
+|--------------------------------------------------------------------------
+| Dashboard
+|--------------------------------------------------------------------------
+*/
 
-// Orders
-router.get("/admin/orders", getAllOrders);
+/**
+ * GET /api/v1/admin/dashboard
+ */
+router.get("/dashboard", getDashboardSummary);
+
+/**
+ * GET /api/v1/admin/stats
+ */
+router.get("/stats", getDashboardStats);
+
+/**
+ * GET /api/v1/admin/stats/timeseries
+ *
+ * Query:
+ * ?period=daily
+ * ?period=weekly
+ * ?period=monthly
+ */
+router.get(
+  "/stats/timeseries",
+  getTimeSeriesStats,
+);
+
+/*
+|--------------------------------------------------------------------------
+| Users
+|--------------------------------------------------------------------------
+*/
+
+/**
+ * GET /api/v1/admin/users
+ */
+router.get("/users", getAllUsers);
+
+/**
+ * GET /api/v1/admin/users/search
+ */
+router.get(
+  "/users/search",
+  searchUsers,
+);
+
+/**
+ * GET /api/v1/admin/users/basic-search
+ */
+router.get(
+  "/users/basic-search",
+  searchUsersBasic,
+);
+
+/**
+ * GET /api/v1/admin/users/cursor
+ */
+router.get(
+  "/users/cursor",
+  getUsersCursor,
+);
+
+/**
+ * PATCH /api/v1/admin/users/:userId/role
+ */
 router.patch(
-  "/admin/orders/:orderId/status",
+  "/users/:userId/role",
+  updateUserRole,
+);
+
+/**
+ * DELETE /api/v1/admin/users/:userId
+ */
+router.delete(
+  "/users/:userId",
+  deleteUser,
+);
+
+/*
+|--------------------------------------------------------------------------
+| Orders
+|--------------------------------------------------------------------------
+*/
+
+/**
+ * GET /api/v1/admin/orders
+ */
+router.get(
+  "/orders",
+  getAllOrders,
+);
+
+/**
+ * PATCH /api/v1/admin/orders/:orderId/status
+ */
+router.patch(
+  "/orders/:orderId/status",
   updateOrderStatus,
 );
 
-// Subscriptions
+/*
+|--------------------------------------------------------------------------
+| Subscriptions
+|--------------------------------------------------------------------------
+*/
+
+/**
+ * GET /api/v1/admin/subscriptions
+ */
 router.get(
-  "/admin/subscriptions",
+  "/subscriptions",
   getAllSubscriptions,
 );
 
+/**
+ * POST /api/v1/admin/subscriptions
+ */
 router.post(
-  "/admin/subscriptions",
+  "/subscriptions",
   createSubscription,
 );
 
+/**
+ * PATCH /api/v1/admin/subscriptions/:subscriptionId
+ */
 router.patch(
-  "/admin/subscriptions/:subscriptionId",
+  "/subscriptions/:subscriptionId",
   updateSubscription,
 );
 
+/**
+ * DELETE /api/v1/admin/subscriptions/:subscriptionId
+ */
 router.delete(
-  "/admin/subscriptions/:subscriptionId",
+  "/subscriptions/:subscriptionId",
   deleteSubscription,
 );
 
-// Projects
+/*
+|--------------------------------------------------------------------------
+| Projects
+|--------------------------------------------------------------------------
+*/
+
+/**
+ * GET /api/v1/admin/projects
+ */
 router.get(
-  "/admin/projects",
+  "/projects",
   getAllProjects,
 );
 
+/**
+ * GET /api/v1/admin/projects/analytics
+ */
 router.get(
-  "/admin/projects/analytics",
+  "/projects/analytics",
   getProjectAnalytics,
 );
 
+/**
+ * GET /api/v1/admin/projects/:projectId
+ */
 router.get(
-  "/admin/projects/:projectId",
+  "/projects/:projectId",
   getProjectById,
 );
 
+/**
+ * DELETE /api/v1/admin/projects/:projectId
+ */
 router.delete(
-  "/admin/projects/:projectId",
+  "/projects/:projectId",
   deleteProject,
 );
 
-// Reports
+/*
+|--------------------------------------------------------------------------
+| Reports
+|--------------------------------------------------------------------------
+*/
+
+/**
+ * GET /api/v1/admin/reports/revenue
+ */
 router.get(
-  "/admin/reports/revenue",
+  "/reports/revenue",
   getRevenueReport,
 );
 
+/**
+ * GET /api/v1/admin/reports/users
+ */
 router.get(
-  "/admin/reports/users",
+  "/reports/users",
   getUserActivityReport,
 );
 
+/**
+ * GET /api/v1/admin/reports/projects
+ */
 router.get(
-  "/admin/reports/projects",
+  "/reports/projects",
   getReportProjectAnalytics,
 );
 
+/**
+ * GET /api/v1/admin/reports/export
+ */
 router.get(
-  "/admin/reports/export",
+  "/reports/export",
   exportReport,
 );
 
-// Logs
+/*
+|--------------------------------------------------------------------------
+| Admin Logs
+|--------------------------------------------------------------------------
+*/
+
+/**
+ * GET /api/v1/admin/logs
+ */
 router.get(
-  "/admin/logs",
+  "/logs",
   getAdminLogs,
 );
 
-// Search History
+/*
+|--------------------------------------------------------------------------
+| Search History
+|--------------------------------------------------------------------------
+*/
+
+/**
+ * GET /api/v1/admin/search/history
+ */
 router.get(
-  "/admin/search/history",
+  "/search/history",
   getSearchHistoryController,
 );
 
+/**
+ * DELETE /api/v1/admin/search/history
+ */
 router.delete(
-  "/admin/search/history",
+  "/search/history",
   clearSearchHistoryController,
 );
 

@@ -1,7 +1,16 @@
+
 import cors from "cors";
 import helmet from "helmet";
 import morgan from "morgan";
 import cookieParser from "cookie-parser";
+
+import Express, {
+  type Application,
+  type Request,
+  type Response,
+  type Express as Ex,
+} from "express";
+
 import { config } from "./config/index.js";
 import { setupSwagger } from "./config/swagger.js";
 
@@ -21,16 +30,14 @@ import {
   redisRateLimiter,
 } from "./middleware/rateLimiter.js";
 
-import Express, {
-  type Application,
-  type Request,
-  type Response,
-  type Express as Ex,
-} from "express";
-
 const app: Application = Express();
 
-// CORS Configuration
+/*
+|--------------------------------------------------------------------------
+| CORS Configuration
+|--------------------------------------------------------------------------
+*/
+
 const corsOptions = {
   origin:
     config.NODE_ENV === "production"
@@ -39,66 +46,216 @@ const corsOptions = {
 
   credentials: true,
 
-  methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
+  methods: [
+    "GET",
+    "POST",
+    "PUT",
+    "DELETE",
+    "PATCH",
+  ],
 
-  allowedHeaders: ["Content-Type", "Authorization"],
+  allowedHeaders: [
+    "Content-Type",
+    "Authorization",
+  ],
 };
 
-// Middlewares
+/*
+|--------------------------------------------------------------------------
+| Global Middlewares
+|--------------------------------------------------------------------------
+*/
+
 app.use(helmet());
+
 app.use(cors(corsOptions));
+
 app.use(cookieParser());
 
-app.use(Express.json({ limit: "10mb" }));
-app.use(Express.urlencoded({ extended: true, limit: "10mb" }));
-
-app.use(morgan("dev"));
-
-// Health Check Route
-app.get("/health", (_req: Request, res: Response) => {
-  res.status(200).json({
-    status: "OK",
-    timestamp: new Date().toISOString(),
-    environment: config.NODE_ENV,
-  });
-});
-
-app.use("/health", healthCheck);
-
-// 1. Global & Specific Rate Limiters Applied First
-app.use("/api", apiLimiter);
-
 app.use(
-  "/api/v1/admin",
-  redisRateLimiter({
-    windowMs: 60 * 1000, // 1 minute
-    max: 30, // 30 requests per minute
-    message: "Too many admin requests, please slow down.",
+  Express.json({
+    limit: "10mb",
   }),
 );
 
-app.use(performanceMonitor(1000));
+app.use(
+  Express.urlencoded({
+    extended: true,
+    limit: "10mb",
+  }),
+);
 
-app.use("/api/v1/auth", authLimiter);
+app.use(morgan("dev"));
 
-// 2. Routers Mounted Second
-app.use("/api/v1", authRouter);
-app.use("/api/v1", projectRouter);
-app.use("/api/v1", orderRouter);
-app.use("/api/v1", subscriptionRouter);
-app.use("/api/v1", adminRouter);
+/*
+|--------------------------------------------------------------------------
+| Health Check
+|--------------------------------------------------------------------------
+*/
 
-// 404 Route Not Found Handler
-app.use((req: Request, res: Response) => {
-  res.status(404).json({
-    success: false,
-    message: `Route not found: ${req.method} ${req.originalUrl}`,
-  });
-});
+app.get(
+  "/health",
+  (_req: Request, res: Response) => {
+    res.status(200).json({
+      status: "OK",
+      timestamp: new Date().toISOString(),
+      environment: config.NODE_ENV,
+    });
+  },
+);
+
+app.use("/health", healthCheck);
+
+/*
+|--------------------------------------------------------------------------
+| Rate Limiters
+|--------------------------------------------------------------------------
+*/
+
+/**
+ * General API rate limiter
+ */
+app.use(
+  "/api",
+  apiLimiter,
+);
+
+/**
+ * Admin-specific rate limiter
+ */
+app.use(
+  "/api/v1/admin",
+  redisRateLimiter({
+    windowMs: 60 * 1000,
+    max: 30,
+    message:
+      "Too many admin requests, please slow down.",
+  }),
+);
+
+/**
+ * Performance monitoring
+ */
+app.use(
+  performanceMonitor(1000),
+);
+
+/**
+ * Authentication rate limiter
+ */
+app.use(
+  "/api/v1/auth",
+  authLimiter,
+);
+
+/*
+|--------------------------------------------------------------------------
+| API Routes
+|--------------------------------------------------------------------------
+*/
+
+/**
+ * Authentication
+ *
+ * /api/v1/auth/*
+ */
+app.use(
+  "/api/v1",
+  authRouter,
+);
+
+/**
+ * Projects
+ *
+ * /api/v1/projects/*
+ */
+app.use(
+  "/api/v1",
+  projectRouter,
+);
+
+/**
+ * Orders
+ *
+ * /api/v1/orders/*
+ */
+app.use(
+  "/api/v1",
+  orderRouter,
+);
+
+/**
+ * Subscriptions
+ *
+ * /api/v1/subscriptions/*
+ */
+app.use(
+  "/api/v1",
+  subscriptionRouter,
+);
+
+/**
+ * Admin
+ *
+ * IMPORTANT:
+ *
+ * adminRouter itself contains:
+ *
+ * /dashboard
+ * /stats
+ * /users
+ * /orders
+ * /projects
+ * etc.
+ *
+ * Therefore it MUST be mounted at:
+ *
+ * /api/v1/admin
+ *
+ * Final URLs:
+ *
+ * /api/v1/admin/dashboard
+ * /api/v1/admin/users
+ * /api/v1/admin/orders
+ * /api/v1/admin/projects
+ * /api/v1/admin/subscriptions
+ */
+app.use(
+  "/api/v1/admin",
+  adminRouter,
+);
+
+/*
+|--------------------------------------------------------------------------
+| 404 Route Handler
+|--------------------------------------------------------------------------
+*/
+
+app.use(
+  (req: Request, res: Response) => {
+    res.status(404).json({
+      success: false,
+      message: `Route not found: ${req.method} ${req.originalUrl}`,
+    });
+  },
+);
+
+/*
+|--------------------------------------------------------------------------
+| Global Error Handler
+|--------------------------------------------------------------------------
+*/
 
 app.use(errorHandler);
 
-// Swagger Documentation setup
-setupSwagger(app as unknown as Ex);
+/*
+|--------------------------------------------------------------------------
+| Swagger
+|--------------------------------------------------------------------------
+*/
+
+setupSwagger(
+  app as unknown as Ex,
+);
 
 export { app };
