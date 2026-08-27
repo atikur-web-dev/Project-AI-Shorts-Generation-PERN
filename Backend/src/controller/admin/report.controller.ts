@@ -317,7 +317,7 @@ const formatDate = (value: unknown): string => {
 };
 
 const drawTitle = (
-  doc: PDFKit.PDFDocument,
+  doc: InstanceType<typeof PDFDocument>,
   title: string,
 ) => {
   doc
@@ -345,7 +345,7 @@ const drawTitle = (
 };
 
 const drawSectionTitle = (
-  doc: PDFKit.PDFDocument,
+  doc: InstanceType<typeof PDFDocument>,
   title: string,
 ) => {
   doc
@@ -357,7 +357,7 @@ const drawSectionTitle = (
 };
 
 const drawTableHeader = (
-  doc: PDFKit.PDFDocument,
+  doc: InstanceType<typeof PDFDocument>,
   columns: Array<{
     title: string;
     x: number;
@@ -390,7 +390,7 @@ const drawTableHeader = (
 };
 
 const ensureSpace = (
-  doc: PDFKit.PDFDocument,
+  doc: InstanceType<typeof PDFDocument>,
   requiredSpace = 60,
 ) => {
   if (doc.y + requiredSpace > 750) {
