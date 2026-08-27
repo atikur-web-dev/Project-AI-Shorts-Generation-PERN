@@ -2,7 +2,7 @@
 
 A full-stack **AI-powered visual content generation platform** that allows users to upload product/model images, generate professional marketing visuals using **Google Gemini AI**, manage projects, purchase AI credits through subscriptions, and organize generated assets through a secure web platform.
 
-> **This is not a basic CRUD project.** It combines **AI integration, OAuth authentication, subscription & payment processing, Redis caching, PostgreSQL, cloud storage, API security, rate limiting, and production-oriented backend architecture** in a single application.
+> This project combines **AI integration, OAuth authentication, subscription & payment processing, Redis caching, PostgreSQL, cloud storage, API security, rate limiting, and production-oriented backend architecture** in a single application.
 
 ## **Key Features**
 
