@@ -1,4 +1,6 @@
 
+// Frontend/src/App.tsx
+
 import React from "react";
 
 import {
@@ -48,8 +50,13 @@ const ProtectedRoute: React.FC<{
 };
 
 /**
- * Routes that should only be accessible
- * when the user is NOT already logged in.
+ * Public routes for normal users.
+ *
+ * If a normal user is already authenticated,
+ * redirect them to the dashboard.
+ *
+ * IMPORTANT:
+ * Admin authentication is NOT handled here.
  */
 const PublicRoute: React.FC<{
   children: React.ReactNode;
@@ -70,35 +77,53 @@ const PublicRoute: React.FC<{
 /**
  * Protected routes for administrators.
  *
- * Do NOT rely only on localStorage isAdmin.
- * The actual authenticated user and role from AuthContext
- * are used as the primary authorization check.
+ * Authorization is based on the actual authenticated
+ * user stored in AuthContext, not merely localStorage.
  */
+
 const AdminRoute: React.FC<{
   children: React.ReactNode;
 }> = ({ children }) => {
   const { user, loading } = useAuth();
 
+  // Wait until AuthContext finishes restoring
+  // the authentication state.
   if (loading) {
     return <LoadingSpinner />;
   }
 
+  // No authenticated user.
+  // Send them to the normal login page because
+  // admin login is handled from the Administrator
+  // modal inside LoginPage.
   if (!user) {
-    return <Navigate to="/admin-login" replace />;
+    return (
+      <Navigate
+        to="/login"
+        replace
+      />
+    );
   }
 
+  // Authenticated user exists, but they are not an admin.
   if (user.role !== "ADMIN") {
-    return <Navigate to="/dashboard" replace />;
+    return (
+      <Navigate
+        to="/dashboard"
+        replace
+      />
+    );
   }
 
+  // Authenticated administrator.
   return <>{children}</>;
 };
 
+
 /**
- * Controls whether the normal user Navbar should be displayed.
+ * Controls whether the normal Navbar is displayed.
  *
- * Admin pages have their own dashboard navigation/layout,
- * so the public Navbar is hidden there.
+ * Admin pages use their own layout/navigation.
  */
 const AppLayout: React.FC<{
   children: React.ReactNode;
@@ -124,9 +149,9 @@ function App() {
       <Router>
         <AppLayout>
           <Routes>
-            {/* =========================
+            {/* =====================================================
                 PUBLIC ROUTES
-            ========================== */}
+            ====================================================== */}
 
             <Route
               path="/"
@@ -147,9 +172,9 @@ function App() {
               element={<Callback />}
             />
 
-            {/* =========================
+            {/* =====================================================
                 USER PROTECTED ROUTES
-            ========================== */}
+            ====================================================== */}
 
             <Route
               path="/dashboard"
@@ -178,20 +203,18 @@ function App() {
               }
             />
 
-            {/* =========================
-                ADMIN AUTHENTICATION
-            ========================== */}
+            {/* =====================================================
+                ADMIN LOGIN
+            ====================================================== */}
 
             <Route
               path="/admin-login"
-              element={
-                <AdminLogin />
-              }
+              element={<AdminLogin />}
             />
 
-            {/* =========================
+            {/* =====================================================
                 ADMIN PROTECTED ROUTES
-            ========================== */}
+            ====================================================== */}
 
             {/* Main Admin Dashboard */}
             <Route
@@ -253,9 +276,9 @@ function App() {
               }
             />
 
-            {/* =========================
+            {/* =====================================================
                 UNKNOWN ROUTES
-            ========================== */}
+            ====================================================== */}
 
             <Route
               path="*"

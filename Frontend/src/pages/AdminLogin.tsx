@@ -1,4 +1,4 @@
-
+// Frontend/src/pages/AdminLogin.tsx
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Shield, Info } from "lucide-react";
@@ -10,7 +10,7 @@ const AdminLogin: React.FC = () => {
   const { login } = useAuth();
 
   const [credentials, setCredentials] = useState({
-    email: "admin@aishorts.com",
+    email: "",
     password: "",
   });
 
@@ -27,9 +27,7 @@ const AdminLogin: React.FC = () => {
       const response = await api.post("/auth/admin/login", credentials);
 
       if (!response.data.success) {
-        throw new Error(
-          response.data.message || "Admin login failed",
-        );
+        throw new Error(response.data.message || "Admin login failed");
       }
 
       const { accessToken, user } = response.data;
@@ -69,30 +67,21 @@ const AdminLogin: React.FC = () => {
     <div className="min-h-screen bg-gradient-to-b from-primary-50 to-white flex items-center justify-center px-4">
       <div className="max-w-md w-full">
         <div className="bg-white rounded-2xl shadow-xl p-8">
-
           {/* Header */}
           <div className="text-center mb-8">
             <div className="bg-primary-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Shield
-                className="text-primary-600"
-                size={32}
-              />
+              <Shield className="text-primary-600" size={32} />
             </div>
 
             <h1 className="text-3xl font-bold text-gray-900 mb-2">
               Admin Login
             </h1>
 
-            <p className="text-gray-600">
-              Access the admin dashboard
-            </p>
+            <p className="text-gray-600">Access the admin dashboard</p>
           </div>
 
           {/* Login Form */}
-          <form
-            onSubmit={handleSubmit}
-            className="space-y-4"
-          >
+          <form onSubmit={handleSubmit} className="space-y-4">
             {/* Email */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -150,9 +139,7 @@ const AdminLogin: React.FC = () => {
               disabled={loading}
               className="w-full bg-primary-600 text-white py-3 rounded-lg font-semibold hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {loading
-                ? "Logging in..."
-                : "Login to Admin Dashboard"}
+              {loading ? "Logging in..." : "Login to Admin Dashboard"}
             </button>
 
             {/* Public Demo Credentials */}
@@ -170,30 +157,23 @@ const AdminLogin: React.FC = () => {
 
                   <div className="space-y-1 text-blue-900">
                     <p>
-                      <span className="font-medium">
-                        Email:
-                      </span>{" "}
+                      <span className="font-medium">Email:</span>{" "}
                       <span className="font-semibold">
-                        admin@aishorts.com
+                        atikuradmin@gmail.com
                       </span>
                     </p>
 
                     <p>
-                      <span className="font-medium">
-                        Password:
-                      </span>{" "}
-                      <span className="font-semibold">
-                        admin123
-                      </span>
+                      <span className="font-medium">Password:</span>{" "}
+                      <span className="font-semibold">atikur123</span>
                     </p>
                   </div>
 
                   <p className="mt-3 text-xs leading-relaxed text-blue-800">
-                    These credentials are intentionally displayed
-                    publicly for demonstration and testing purposes.
-                    This is a demo administrator account provided so
-                    reviewers and visitors can directly access and
-                    test the admin dashboard.
+                    These credentials are intentionally displayed publicly for
+                    demonstration and testing purposes. This is a demo
+                    administrator account provided so reviewers and visitors can
+                    directly access and test the admin dashboard.
                   </p>
                 </div>
               </div>
@@ -210,7 +190,6 @@ const AdminLogin: React.FC = () => {
               ← Back to Home
             </button>
           </div>
-
         </div>
       </div>
     </div>

@@ -1,4 +1,8 @@
+// Backend/src/controller/auth.controller.ts
 import type { Request, Response } from "express";
+
+import { prisma } from "../lib/prisma.js";
+
 import {
   logoutUser,
   rotateRefreshToken,
@@ -12,42 +16,51 @@ import {
 
 import { logger } from "../config/logger.js";
 
-// Re-export Google & GitHub controllers for convenience
-export { googleLogin, googleCallback } from "./auth-google.controller.js";
+export {
+  googleLogin,
+  googleCallback,
+} from "./auth-google.controller.js";
 
-export { githubLogin, githubCallback } from "./auth-github.controller.js";
+export {
+  githubLogin,
+  githubCallback,
+} from "./auth-github.controller.js";
 
-// Logout
-export const logout = async (req: Request, res: Response): Promise<any> => {
+export const logout = async (
+  req: Request,
+  res: Response,
+): Promise<Response> => {
   try {
-    const refreshToken = req.cookies.refreshToken;
+    const refreshToken = req.cookies?.refreshToken;
 
     if (refreshToken) {
       await logoutUser(refreshToken);
-      clearRefreshTokenCookie(res);
     }
 
-    return res.json({
+    clearRefreshTokenCookie(res);
+
+    return res.status(200).json({
       success: true,
       message: "Logged out successfully",
     });
   } catch (error) {
     logger.error("Logout error:", error);
 
-    return res.status(500).json({
-      success: false,
-      message: "Logout failed",
+    clearRefreshTokenCookie(res);
+
+    return res.status(200).json({
+      success: true,
+      message: "Logged out successfully",
     });
   }
 };
 
-// Refresh Access Token
 export const refreshToken = async (
   req: Request,
   res: Response,
-): Promise<any> => {
+): Promise<Response> => {
   try {
-    const oldRefreshToken = req.cookies.refreshToken;
+    const oldRefreshToken = req.cookies?.refreshToken;
 
     if (!oldRefreshToken) {
       return res.status(401).json({
@@ -56,20 +69,24 @@ export const refreshToken = async (
       });
     }
 
-    const { accessToken, refreshToken, user } =
-      await rotateRefreshToken(oldRefreshToken);
+    const {
+      accessToken,
+      refreshToken,
+      user,
+    } = await rotateRefreshToken(oldRefreshToken);
 
-    // Replace old refresh token cookie
     clearRefreshTokenCookie(res);
     setRefreshTokenCookie(res, refreshToken);
 
-    return res.json({
+    return res.status(200).json({
       success: true,
       accessToken,
       user,
     });
   } catch (error) {
     logger.error("Token refresh error:", error);
+
+    clearRefreshTokenCookie(res);
 
     return res.status(401).json({
       success: false,
@@ -78,8 +95,10 @@ export const refreshToken = async (
   }
 };
 
-// Get Current Authenticated User
-export const getMe = async (req: Request, res: Response): Promise<any> => {
+export const getMe = async (
+  req: Request,
+  res: Response,
+): Promise<Response> => {
   try {
     const userId = req.user?.id;
 
@@ -89,8 +108,6 @@ export const getMe = async (req: Request, res: Response): Promise<any> => {
         message: "Unauthorized",
       });
     }
-
-    const { prisma } = await import("../lib/prisma.js");
 
     const user = await prisma.user.findUnique({
       where: {
@@ -103,7 +120,6 @@ export const getMe = async (req: Request, res: Response): Promise<any> => {
         picture: true,
         loginType: true,
         role: true,
-
         userSubscription: {
           select: {
             id: true,
@@ -124,7 +140,7 @@ export const getMe = async (req: Request, res: Response): Promise<any> => {
       });
     }
 
-    return res.json({
+    return res.status(200).json({
       success: true,
       user,
     });
@@ -138,27 +154,37 @@ export const getMe = async (req: Request, res: Response): Promise<any> => {
   }
 };
 
-// Admin Login
 export const adminLoginController = async (
   req: Request,
   res: Response,
-): Promise<any> => {
+): Promise<Response> => {
   try {
     const { email, password } = req.body;
 
-    if (!email || !password) {
+    if (
+      typeof email !== "string" ||
+      typeof password !== "string" ||
+      !email.trim() ||
+      !password
+    ) {
       return res.status(400).json({
         success: false,
         message: "Email and password are required",
       });
     }
 
-    const { accessToken, refreshToken, user } =
-      await adminLogin(email, password);
+    const {
+      accessToken,
+      refreshToken,
+      user,
+    } = await adminLogin(
+      email.trim().toLowerCase(),
+      password,
+    );
 
     setRefreshTokenCookie(res, refreshToken);
 
-    return res.json({
+    return res.status(200).json({
       success: true,
       message: "Admin login successful",
       accessToken,

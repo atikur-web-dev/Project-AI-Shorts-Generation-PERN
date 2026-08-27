@@ -1,5 +1,9 @@
-// Backend/src/middleware/admin.middleware.ts
-import type { Request, Response, NextFunction } from "express";
+import type {
+  NextFunction,
+  Request,
+  Response,
+} from "express";
+
 import { prisma } from "../lib/prisma.js";
 
 export const isAdmin = async (
@@ -26,7 +30,14 @@ export const isAdmin = async (
       },
     });
 
-    if (!user || user.role !== "ADMIN") {
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    if (user.role !== "ADMIN") {
       return res.status(403).json({
         success: false,
         message: "Forbidden: Admin access required",
@@ -35,6 +46,11 @@ export const isAdmin = async (
 
     return next();
   } catch (error) {
+    console.error(
+      "Admin verification error:",
+      error,
+    );
+
     return res.status(500).json({
       success: false,
       message: "Admin verification failed",

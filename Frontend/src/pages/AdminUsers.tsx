@@ -1,4 +1,4 @@
-// Frontend/src/pages/AdminUsers.tsx
+
 import React, { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -46,21 +46,18 @@ const AdminUsers: React.FC = () => {
 
   const [users, setUsers] = useState<User[]>([]);
   const [meta, setMeta] = useState<PaginationMeta | null>(null);
-
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   const [search, setSearch] = useState("");
   const [role, setRole] = useState("");
   const [loginType, setLoginType] = useState("");
-
   const [sortBy, setSortBy] = useState("createdAt");
   const [sortOrder, setSortOrder] = useState("desc");
-
   const [page, setPage] = useState(1);
-  const limit = 10;
-
   const [showFilters, setShowFilters] = useState(false);
+
+  const limit = 10;
 
   const loadUsers = useCallback(async () => {
     try {
@@ -248,7 +245,6 @@ const AdminUsers: React.FC = () => {
 
         {/* Search & Filters */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 mb-6">
-
           <form
             onSubmit={handleSearch}
             className="flex flex-col sm:flex-row gap-3"
@@ -407,7 +403,6 @@ const AdminUsers: React.FC = () => {
 
         {/* Users Table */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-
           <div className="px-6 py-5 border-b border-gray-100 flex flex-col sm:flex-row justify-between gap-2">
             <div>
               <h2 className="text-xl font-semibold text-gray-900">
@@ -435,6 +430,7 @@ const AdminUsers: React.FC = () => {
             <div className="p-12 flex justify-center">
               <div className="text-center">
                 <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary-600 mx-auto" />
+
                 <p className="text-gray-500 mt-3">
                   Loading users...
                 </p>
@@ -577,14 +573,15 @@ const AdminUsers: React.FC = () => {
           {/* Pagination */}
           {meta && meta.totalPages > 1 && (
             <div className="px-6 py-4 border-t border-gray-100 flex flex-col sm:flex-row justify-between items-center gap-4">
-
               <p className="text-sm text-gray-500">
                 Page {meta.page} of {meta.totalPages}
               </p>
 
               <div className="flex items-center gap-2">
                 <button
-                  disabled={!meta.hasPreviousPage || loading}
+                  disabled={
+                    !meta.hasPreviousPage || loading
+                  }
                   onClick={() =>
                     setPage((previous) =>
                       Math.max(previous - 1, 1),
@@ -597,7 +594,9 @@ const AdminUsers: React.FC = () => {
                 </button>
 
                 <button
-                  disabled={!meta.hasNextPage || loading}
+                  disabled={
+                    !meta.hasNextPage || loading
+                  }
                   onClick={() =>
                     setPage((previous) => previous + 1)
                   }

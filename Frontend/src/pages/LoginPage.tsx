@@ -11,7 +11,7 @@ const LoginPage: React.FC = () => {
   const [searchParams] = useSearchParams();
 
   const [showAdminModal, setShowAdminModal] = useState(false);
-  const [adminEmail, setAdminEmail] = useState('admin@aishorts.com');
+  const [adminEmail, setAdminEmail] = useState('atikuradmin@gmail.com');
   const [adminPassword, setAdminPassword] = useState('');
   const [adminError, setAdminError] = useState('');
   const [adminLoading, setAdminLoading] = useState(false);
@@ -36,55 +36,98 @@ const LoginPage: React.FC = () => {
     }
   }, [user, navigate, login, searchParams]);
 
-  const handleAdminLogin = async (
-    event: React.FormEvent<HTMLFormElement>,
-  ) => {
-    event.preventDefault();
 
-    setAdminError('');
-    setAdminLoading(true);
+const handleAdminLogin = async (
+  event: React.FormEvent<HTMLFormElement>,
+) => {
+  event.preventDefault();
 
-    try {
-      const response = await authService.adminLogin(
-        adminEmail,
-        adminPassword,
+  setAdminError("");
+  setAdminLoading(true);
+
+  try {
+    const response = await authService.adminLogin(
+      adminEmail,
+      adminPassword,
+    );
+
+    // Validate admin login response
+    if (
+      !response.success ||
+      !response.accessToken ||
+      !response.user
+    ) {
+      throw new Error(
+        response.message || "Admin login failed",
       );
-
-      if (!response.success || !response.accessToken) {
-        throw new Error(
-          response.message || 'Admin login failed',
-        );
-      }
-
-      // Store the real JWT access token
-      authService.setAccessToken(response.accessToken);
-
-      // Mark this browser session as an admin session
-      localStorage.setItem('isAdmin', 'true');
-
-      if (response.user) {
-        localStorage.setItem(
-          'adminEmail',
-          response.user.email,
-        );
-      }
-
-      setShowAdminModal(false);
-      setAdminPassword('');
-
-      navigate('/admin');
-    } catch (error: any) {
-      console.error('Admin login error:', error);
-
-      setAdminError(
-        error.response?.data?.message ||
-          error.message ||
-          'Admin login failed',
-      );
-    } finally {
-      setAdminLoading(false);
     }
-  };
+
+    // Make absolutely sure the authenticated account
+    // is actually an administrator.
+    if (response.user.role !== "ADMIN") {
+      throw new Error(
+        "This account does not have administrator access.",
+      );
+    }
+
+    // Store the real JWT access token
+    authService.setAccessToken(
+      response.accessToken,
+    );
+
+    // IMPORTANT:
+    // Update AuthContext with the authenticated admin.
+    // AdminRoute depends on this user state.
+    login(
+      response.user,
+      response.accessToken,
+    );
+
+    // Optional admin session markers
+    localStorage.setItem(
+      "isAdmin",
+      "true",
+    );
+
+    localStorage.setItem(
+      "adminUser",
+      JSON.stringify(response.user),
+    );
+
+    localStorage.setItem(
+      "adminEmail",
+      response.user.email,
+    );
+
+    // Close admin modal
+    setShowAdminModal(false);
+
+    // Clear password field
+    setAdminPassword("");
+
+    // Clear previous error
+    setAdminError("");
+
+    // IMPORTANT:
+    // Directly navigate to the admin dashboard.
+    navigate("/admin", {
+      replace: true,
+    });
+  } catch (error: any) {
+    console.error(
+      "Admin login error:",
+      error,
+    );
+
+    setAdminError(
+      error.response?.data?.message ||
+        error.message ||
+        "Admin login failed",
+    );
+  } finally {
+    setAdminLoading(false);
+  }
+};
 
   const closeAdminModal = () => {
     if (adminLoading) {
@@ -294,14 +337,14 @@ const LoginPage: React.FC = () => {
                   <span className="font-medium">
                     Email:
                   </span>{' '}
-                  admin@aishorts.com
+                  atikuradmin@gmail.com
                 </p>
 
                 <p>
                   <span className="font-medium">
                     Password:
                   </span>{' '}
-                  admin123
+                  atikur123
                 </p>
               </div>
 
