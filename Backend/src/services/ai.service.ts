@@ -13,7 +13,7 @@ import { mkdirSync, rmSync } from "fs";
 import path from "path";
 import { cloudinary } from "../lib/cloudinary.js";
 import type { Project } from "../generated/prisma/client.js";
-// import type { Express } from "express";
+
 
 interface GenerateImageInput {
   userPrompt?: string;
