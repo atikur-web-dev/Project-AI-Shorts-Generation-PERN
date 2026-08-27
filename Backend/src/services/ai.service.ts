@@ -4,7 +4,6 @@ import {
   HarmCategory,
   type GenerateContentConfig,
 } from "@google/genai";
-
 import ai from "../config/ai.js";
 import { readFileSync } from "fs";
 import { uploadBufferToCloudinary } from "./cloudinary.service.js";
@@ -20,13 +19,17 @@ interface GenerateImageInput {
   userPrompt?: string;
   aspectRatio?: string;
 }
+interface UploadedFile {
+  path: string;
+  mimetype: string;
+}
 
 const VIDEO_POLL_INTERVAL = 10000; 
 const MAX_POLL_ATTEMPTS = 30; 
 // Image generation
 export const generateImageWithAI = async (
-  productImage: Express.Multer.File,
-  modelImage: Express.Multer.File,
+productImage: UploadedFile,
+modelImage: UploadedFile,
   body: GenerateImageInput,
 ): Promise<string> => {
   try {

@@ -1,7 +1,6 @@
 // Backend/src/controller/project.controller.ts
 
 import type { Request, Response } from "express";
-
 import {
   generateImageWithAI,
   generateVideoWithAI,
@@ -13,10 +12,7 @@ import { prisma } from "../lib/prisma.js";
 import { logger } from "../config/logger.js";
 import { unlink } from "fs/promises";
 
-export const createProject = async (
-  req: Request,
-  res: Response,
-) => {
+export const createProject = async (req: Request, res: Response) => {
   let creditDeducted = false;
 
   const userId = req.user?.id;
@@ -44,45 +40,36 @@ export const createProject = async (
       },
     });
 
-    console.log(
-      "User credits:",
-      user?.userSubscription?.credits,
-    );
+    console.log("User credits:", user?.userSubscription?.credits);
 
-    if (
-      !user?.userSubscription ||
-      user.userSubscription.credits < 5
-    ) {
+    if (!user?.userSubscription || user.userSubscription.credits < 5) {
       return res.status(400).json({
         success: false,
-        message:
-          "Insufficient credits. Need at least 5 credits.",
+        message: "Insufficient credits. Need at least 5 credits.",
       });
     }
 
     // 2. Get uploaded files
+    interface UploadedFile {
+      path: string;
+      mimetype: string;
+    }
+
     const files = req.files as {
-      [fieldname: string]: Express.Multer.File[];
+      [fieldname: string]: UploadedFile[];
     };
 
     const productImage = files?.productImage?.[0];
     const modelImage = files?.modelImage?.[0];
 
-    console.log(
-      "Product image:",
-      productImage ? "present" : "missing",
-    );
+    console.log("Product image:", productImage ? "present" : "missing");
 
-    console.log(
-      "Model image:",
-      modelImage ? "present" : "missing",
-    );
+    console.log("Model image:", modelImage ? "present" : "missing");
 
     if (!productImage || !modelImage) {
       return res.status(400).json({
         success: false,
-        message:
-          "Both product and model images are required",
+        message: "Both product and model images are required",
       });
     }
 
@@ -117,17 +104,13 @@ export const createProject = async (
 
     const project = await prisma.project.create({
       data: {
-        projectName:
-          req.body.projectName || "Untitled",
+        projectName: req.body.projectName || "Untitled",
 
-        productName:
-          req.body.productName || "Product",
+        productName: req.body.productName || "Product",
 
-        productDescription:
-          req.body.productDescription || null,
+        productDescription: req.body.productDescription || null,
 
-        userPrompt:
-          req.body.userPrompt || null,
+        userPrompt: req.body.userPrompt || null,
 
         productImage: productUrl,
 
@@ -137,42 +120,33 @@ export const createProject = async (
 
         generatedVideo: "",
 
-        aspectRatio:
-          req.body.aspectRatio || "9:16",
+        aspectRatio: req.body.aspectRatio || "9:16",
 
         userId,
       },
     });
 
-    console.log(
-      "Project created with ID:",
-      project.id,
-    );
+    console.log("Project created with ID:", project.id);
 
     // 6. Generate AI image
     console.log("Generating AI image...");
 
-    const generatedImage = await generateImageWithAI(
-      productImage,
-      modelImage,
-      {
-        userPrompt: req.body.userPrompt,
-        aspectRatio: req.body.aspectRatio,
-      },
-    );
+    const generatedImage = await generateImageWithAI(productImage, modelImage, {
+      userPrompt: req.body.userPrompt,
+      aspectRatio: req.body.aspectRatio,
+    });
 
     console.log("AI image generated");
 
     // 7. Update project with generated image
-    const updatedProject =
-      await prisma.project.update({
-        where: {
-          id: project.id,
-        },
-        data: {
-          generatedImage,
-        },
-      });
+    const updatedProject = await prisma.project.update({
+      where: {
+        id: project.id,
+      },
+      data: {
+        generatedImage,
+      },
+    });
 
     // 8. Cleanup temporary files
     await unlink(productImage.path).catch(() => {});
@@ -184,10 +158,7 @@ export const createProject = async (
       data: updatedProject,
     });
   } catch (error) {
-    console.error(
-      "Project creation error:",
-      error,
-    );
+    console.error("Project creation error:", error);
 
     // Refund credits if project generation failed
     if (creditDeducted) {
@@ -203,21 +174,13 @@ export const createProject = async (
           },
         });
 
-        logger.info(
-          `Credits refunded for user ${userId}`,
-        );
+        logger.info(`Credits refunded for user ${userId}`);
       } catch (refundError) {
-        logger.error(
-          "Credit refund failed:",
-          refundError,
-        );
+        logger.error("Credit refund failed:", refundError);
       }
     }
 
-    logger.error(
-      "Project creation failed:",
-      error,
-    );
+    logger.error("Project creation failed:", error);
 
     return res.status(500).json({
       success: false,
@@ -229,16 +192,10 @@ export const createProject = async (
   }
 };
 
-export const getProjects = async (
-  req: Request,
-  res: Response,
-) => {
+export const getProjects = async (req: Request, res: Response) => {
   const userId = req.user?.id;
 
-  console.log(
-    "GET PROJECTS USER ID:",
-    userId,
-  );
+  console.log("GET PROJECTS USER ID:", userId);
 
   if (!userId) {
     return res.status(401).json({
@@ -248,30 +205,23 @@ export const getProjects = async (
   }
 
   try {
-    const projects =
-      await prisma.project.findMany({
-        where: {
-          userId,
-        },
-        orderBy: {
-          createdAt: "desc",
-        },
-      });
+    const projects = await prisma.project.findMany({
+      where: {
+        userId,
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+    });
 
-    console.log(
-      "GET PROJECTS RESULT:",
-      projects,
-    );
+    console.log("GET PROJECTS RESULT:", projects);
 
     return res.json({
       success: true,
       data: projects,
     });
   } catch (error) {
-    logger.error(
-      "Get projects error:",
-      error,
-    );
+    logger.error("Get projects error:", error);
 
     return res.status(500).json({
       success: false,
@@ -280,10 +230,7 @@ export const getProjects = async (
   }
 };
 
-export const generateVideo = async (
-  req: Request,
-  res: Response,
-) => {
+export const generateVideo = async (req: Request, res: Response) => {
   const userId = req.user?.id;
   const { projectId } = req.body;
 
@@ -294,14 +241,10 @@ export const generateVideo = async (
     });
   }
 
-  if (
-    !projectId ||
-    typeof projectId !== "string"
-  ) {
+  if (!projectId || typeof projectId !== "string") {
     return res.status(400).json({
       success: false,
-      message:
-        "Project ID is required and must be a string",
+      message: "Project ID is required and must be a string",
     });
   }
 
@@ -309,34 +252,27 @@ export const generateVideo = async (
 
   try {
     // 1. Check credits
-    const hasCredits =
-      await CreditService.checkCredits(
-        userId,
-        10,
-      );
+    const hasCredits = await CreditService.checkCredits(userId, 10);
 
     if (!hasCredits) {
       return res.status(400).json({
         success: false,
-        message:
-          "Insufficient credits. Need 10 credits for video generation.",
+        message: "Insufficient credits. Need 10 credits for video generation.",
       });
     }
 
     // 2. Find project + ownership check
-    const project =
-      await prisma.project.findFirst({
-        where: {
-          id: projectId,
-          userId,
-        },
-      });
+    const project = await prisma.project.findFirst({
+      where: {
+        id: projectId,
+        userId,
+      },
+    });
 
     if (!project) {
       return res.status(404).json({
         success: false,
-        message:
-          "Project not found or access denied",
+        message: "Project not found or access denied",
       });
     }
 
@@ -344,8 +280,7 @@ export const generateVideo = async (
     if (project.generatedVideo) {
       return res.status(400).json({
         success: false,
-        message:
-          "Video already generated for this project",
+        message: "Video already generated for this project",
         data: {
           videoUrl: project.generatedVideo,
         },
@@ -353,58 +288,41 @@ export const generateVideo = async (
     }
 
     // 4. Deduct credits
-    await CreditService.deductCredits(
-      userId,
-      10,
-    );
+    await CreditService.deductCredits(userId, 10);
 
     creditDeducted = true;
 
     // 5. Generate video
-    const videoUrl =
-      await generateVideoWithAI(project);
+    const videoUrl = await generateVideoWithAI(project);
 
     // 6. Save generated video URL
-    const updatedProject =
-      await prisma.project.update({
-        where: {
-          id: projectId,
-        },
-        data: {
-          generatedVideo: videoUrl,
-        },
-      });
+    const updatedProject = await prisma.project.update({
+      where: {
+        id: projectId,
+      },
+      data: {
+        generatedVideo: videoUrl,
+      },
+    });
 
     return res.json({
       success: true,
-      message:
-        "Video generated successfully",
+      message: "Video generated successfully",
       data: updatedProject,
     });
   } catch (error) {
     // Refund credits if generation failed
     if (creditDeducted) {
       try {
-        await CreditService.refundCredits(
-          userId,
-          10,
-        );
+        await CreditService.refundCredits(userId, 10);
 
-        logger.info(
-          `Credits refunded for user ${userId}`,
-        );
+        logger.info(`Credits refunded for user ${userId}`);
       } catch (refundError) {
-        logger.error(
-          "Credit refund failed:",
-          refundError,
-        );
+        logger.error("Credit refund failed:", refundError);
       }
     }
 
-    logger.error(
-      "Video generation failed:",
-      error,
-    );
+    logger.error("Video generation failed:", error);
 
     return res.status(500).json({
       success: false,

@@ -2,6 +2,7 @@
 
 import type { Request, Response } from "express";
 import PDFDocument from "pdfkit";
+// import type PDFKit from "pdfkit";
 
 import { prisma } from "../../lib/prisma.js";
 import { logger } from "../../config/logger.js";
