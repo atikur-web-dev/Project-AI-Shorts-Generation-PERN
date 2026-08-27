@@ -13,7 +13,7 @@ import axios from "axios";
 import { mkdirSync, rmSync } from "fs";
 import path from "path";
 import { cloudinary } from "../lib/cloudinary.js";
-import type { Project } from "@prisma/client";
+import type { Project } from "../generated/prisma/client.js";
 // import type { Express } from "express";
 
 interface GenerateImageInput {
@@ -21,8 +21,8 @@ interface GenerateImageInput {
   aspectRatio?: string;
 }
 
-const VIDEO_POLL_INTERVAL = 10000; // 10 seconds
-const MAX_POLL_ATTEMPTS = 30; // 5 minutes
+const VIDEO_POLL_INTERVAL = 10000; 
+const MAX_POLL_ATTEMPTS = 30; 
 // Image generation
 export const generateImageWithAI = async (
   productImage: Express.Multer.File,
@@ -116,7 +116,6 @@ ${body.userPrompt || ""}
   }
 };
 
-// Generate Video
 // Generate Video
 export const generateVideoWithAI = async (
   project: Project,
