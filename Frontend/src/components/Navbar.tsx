@@ -1,9 +1,9 @@
+// Frontend/src/components/Navbar.tsx
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   LogOut,
   LayoutDashboard,
-  Shield,
   ChevronDown,
   UserRound,
 } from "lucide-react";
@@ -25,7 +25,6 @@ const HomeIcon: React.FC<{ size?: number }> = ({ size = 17 }) => (
       strokeLinecap="round"
       strokeLinejoin="round"
     />
-
     <path
       d="M9 21V13H15V21"
       stroke="currentColor"
@@ -39,7 +38,6 @@ const HomeIcon: React.FC<{ size?: number }> = ({ size = 17 }) => (
 const Navbar: React.FC = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-
   const [imageError, setImageError] = useState(false);
 
   const handleLogout = async () => {
@@ -59,6 +57,8 @@ const Navbar: React.FC = () => {
       .join("");
   };
 
+  const isAdmin = user?.role === "ADMIN";
+
   return (
     <nav className="sticky top-0 z-50 border-b border-gray-200 bg-white/95 backdrop-blur">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -66,6 +66,7 @@ const Navbar: React.FC = () => {
 
           {/* Brand */}
           <button
+            type="button"
             onClick={() => navigate("/")}
             className="group flex items-center gap-2"
           >
@@ -84,12 +85,72 @@ const Navbar: React.FC = () => {
             </div>
           </button>
 
-          {/* Right Side */}
-          {user ? (
+          {/* =========================
+              RIGHT SIDE
+          ========================== */}
+
+          {!user ? (
+            /* =================================
+               VISITOR / NOT LOGGED IN
+            ================================== */
+            <div className="flex items-center gap-1 sm:gap-2">
+
+              {/* Home */}
+              <button
+                type="button"
+                onClick={() => navigate("/")}
+                className="hidden items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-gray-600 transition hover:bg-gray-100 hover:text-gray-900 sm:flex"
+              >
+                <HomeIcon size={17} />
+                Home
+              </button>
+
+              {/* About */}
+              <button
+                type="button"
+                onClick={() => navigate("/about")}
+                className="hidden rounded-lg px-3 py-2 text-sm font-medium text-gray-600 transition hover:bg-gray-100 hover:text-gray-900 sm:block"
+              >
+                About
+              </button>
+
+              {/* Services */}
+              <button
+                type="button"
+                onClick={() => navigate("/services")}
+                className="hidden rounded-lg px-3 py-2 text-sm font-medium text-gray-600 transition hover:bg-gray-100 hover:text-gray-900 sm:block"
+              >
+                Services
+              </button>
+
+              {/* Contact */}
+              <button
+                type="button"
+                onClick={() => navigate("/contact")}
+                className="hidden rounded-lg px-3 py-2 text-sm font-medium text-gray-600 transition hover:bg-gray-100 hover:text-gray-900 sm:block"
+              >
+                Contact
+              </button>
+
+              {/* Sign In */}
+              <button
+                type="button"
+                onClick={() => navigate("/login")}
+                className="ml-1 inline-flex items-center gap-2 rounded-xl bg-gray-900 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:-translate-y-0.5 hover:bg-gray-800 hover:shadow-md active:translate-y-0"
+              >
+                <UserRound size={17} />
+                Sign in
+              </button>
+            </div>
+          ) : (
+            /* =================================
+               LOGGED-IN USER / ADMIN
+            ================================== */
             <div className="flex items-center gap-2 sm:gap-3">
 
               {/* Home */}
               <button
+                type="button"
                 onClick={() => navigate("/")}
                 className="hidden items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-gray-600 transition hover:bg-gray-100 hover:text-gray-900 sm:flex"
               >
@@ -99,23 +160,16 @@ const Navbar: React.FC = () => {
 
               {/* Dashboard */}
               <button
-                onClick={() => navigate("/dashboard")}
+                type="button"
+                onClick={() =>
+                  navigate(isAdmin ? "/admin" : "/dashboard")
+                }
                 className="hidden items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-gray-600 transition hover:bg-gray-100 hover:text-gray-900 sm:flex"
               >
                 <LayoutDashboard size={17} />
-                Dashboard
-              </button>
 
-              {/* Admin */}
-              {user.role === "ADMIN" && (
-                <button
-                  onClick={() => navigate("/admin")}
-                  className="hidden items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-gray-600 transition hover:bg-gray-100 hover:text-gray-900 sm:flex"
-                >
-                  <Shield size={17} />
-                  Admin
-                </button>
-              )}
+                {isAdmin ? "Dashboard" : "Dashboard"}
+              </button>
 
               {/* Divider */}
               <div className="hidden h-7 w-px bg-gray-200 sm:block" />
@@ -151,9 +205,7 @@ const Navbar: React.FC = () => {
                     </p>
 
                     <p className="text-[11px] text-gray-400">
-                      {user.role === "ADMIN"
-                        ? "Administrator"
-                        : "Account"}
+                      {isAdmin ? "Administrator" : "Account"}
                     </p>
                   </div>
 
@@ -170,7 +222,7 @@ const Navbar: React.FC = () => {
                   <div className="border-b border-gray-100 px-3 py-2.5">
                     <div className="flex items-center gap-3">
 
-                      {/* Dropdown Avatar */}
+                      {/* Avatar */}
                       <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary-100">
                         {user.picture && !imageError ? (
                           <img
@@ -212,24 +264,14 @@ const Navbar: React.FC = () => {
                   {/* Dashboard */}
                   <button
                     type="button"
-                    onClick={() => navigate("/dashboard")}
+                    onClick={() =>
+                      navigate(isAdmin ? "/admin" : "/dashboard")
+                    }
                     className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-gray-600 transition hover:bg-gray-50 hover:text-gray-900"
                   >
                     <LayoutDashboard size={17} />
                     Dashboard
                   </button>
-
-                  {/* Admin */}
-                  {user.role === "ADMIN" && (
-                    <button
-                      type="button"
-                      onClick={() => navigate("/admin")}
-                      className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-gray-600 transition hover:bg-gray-50 hover:text-gray-900"
-                    >
-                      <Shield size={17} />
-                      Admin Panel
-                    </button>
-                  )}
 
                   {/* Logout */}
                   <button
@@ -243,16 +285,6 @@ const Navbar: React.FC = () => {
                 </div>
               </div>
             </div>
-          ) : (
-            /* Login */
-            <button
-              type="button"
-              onClick={() => navigate("/login")}
-              className="inline-flex items-center gap-2 rounded-xl bg-gray-900 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:-translate-y-0.5 hover:bg-gray-800 hover:shadow-md active:translate-y-0"
-            >
-              <UserRound size={17} />
-              Sign in
-            </button>
           )}
         </div>
       </div>

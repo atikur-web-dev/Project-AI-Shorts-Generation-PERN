@@ -1,444 +1,133 @@
-# AI Shorts Generator — Backend API
+# **AI Shorts Generator**
 
-## Overview
+A full-stack **AI-powered visual content generation platform** that allows users to upload product/model images, generate professional marketing visuals using **Google Gemini AI**, manage projects, purchase AI credits through subscriptions, and organize generated assets through a secure web platform.
 
-AI Shorts Generator is a production-ready RESTful backend that enables users to generate AI-powered product images and marketing videos using Google Gemini AI and Veo AI.
+> **This is not a basic CRUD project.** It combines **AI integration, OAuth authentication, subscription & payment processing, Redis caching, PostgreSQL, cloud storage, API security, rate limiting, and production-oriented backend architecture** in a single application.
 
-The backend provides secure authentication, AI image generation, AI video generation, subscription management, payment processing, media storage, and administrative analytics through a scalable service-oriented architecture.
----
-## Features
+## **Key Features**
 
-### Authentication & Authorization
-- Google OAuth 2.0 Authentication
-- GitHub OAuth 2.0 Authentication
-- JWT Access & Refresh Token Authentication
-- Secure HTTP-Only Cookie-based Session Management
-- Redis-based Session Revocation
+- **AI-powered image generation** using Google Gemini
+- **Google & GitHub OAuth authentication**
+- **JWT-based authentication with session/refresh-token management**
+- **Subscription & AI credit system**
+- **SSLCommerz Sandbox payment integration**
+- **PostgreSQL + Prisma ORM**
+- **Redis caching & rate limiting**
+- **Cloudinary-based media storage**
+- **Admin dashboard with real SQL analytics**
+- **Protected APIs with Helmet, CORS, HPP & rate limiting**
+- **Zod-based environment/configuration validation**
+- **TypeScript across frontend & backend**
+- **Dockerized Redis development environment**
+- **Project history and generated asset management**
 
-### AI Content Generation
-- AI Product & Model Image Composition (Google Gemini)
-- AI Marketing Video Generation (Veo AI)
-- Custom Prompt-based Image Generation
-- Multiple Aspect Ratio Support (e.g. 9:16)
+## **What Can You Do?**
 
-### Subscription & Payment
-- Credit-based AI Generation System
-- Automatic Credit Refund on Failed AI Processing
-- SSLCommerz Payment Gateway Integration
-- Secure Payment Webhook Validation
+### **User**
 
-### Media Management
-- Cloudinary CDN Integration
-- Optimized Image & Video Storage
-- Secure Media Delivery
+- Register/login with email & password
+- Login using Google OAuth
+- Login using GitHub OAuth
+- Manage account and profile
+- Upload product/model images
+- Generate AI-powered visuals using prompts
+- Manage generated projects
+- View generated images/videos
+- Track AI credits
+- Purchase subscription plans
+- Make payments through SSLCommerz Sandbox
+- Access previous projects and generated assets
 
-### Admin Dashboard
-- User Management
-- Order Management
-- Dashboard Analytics
-- Revenue Reports
-- CSV/PDF Report Export
+### **Admin**
 
-### Security & Infrastructure
-- Prisma ORM + PostgreSQL
-- Redis Caching & Rate Limiting
-- Helmet & CORS Protection
-- Zod Request Validation
-- Winston Logging
-- Docker & Docker Compose Support
+- Access protected Admin Dashboard
+- Monitor total users
+- Monitor orders and revenue
+- Track completed/pending/failed payments
+- Monitor active subscriptions
+- View total projects
+- Monitor generated images and videos
+- View recent system activity
+- Analyze daily/weekly/monthly statistics
 
-## Tech Stack
+## **AI Generation Workflow**
 
-### Backend
-- Node.js
-- Express.js
-- TypeScript
+**Upload Images → Add Creative Prompt → Gemini AI Processing → Generate Visual → Store Asset → Save Project**
 
-### Database & ORM
-- PostgreSQL
-- Prisma ORM
+The application transforms user-provided product/model images into professional marketing-oriented visual content without requiring a traditional photography setup.
 
-### AI Services
-- Google Gemini AI
-- Veo AI
+## **Authentication & Security**
 
-### Storage
-- Cloudinary
-
-### Authentication
-- JWT
+- JWT authentication
+- Access token + refresh token architecture
+- Session management
 - Google OAuth 2.0
-- GitHub OAuth 2.0
-- HTTP-Only Cookies
-
-### Caching
-- Redis
-
-### Payment Gateway
-- SSLCommerz
-
-### Security
-- Helmet
-- CORS
-- Zod Validation
-- Express Rate Limit
-
-### DevOps & Tools
-- Docker
-- Docker Compose
-- Winston Logger
-
-## Project Structure
-
-```text
-Backend/
-├── prisma/
-│   ├── schema.prisma          # Database schema
-│   └── seed.ts                # Database seed
-├── src/
-│   ├── config/                # App & environment configuration
-│   ├── controllers/           # Request handlers
-│   ├── services/              # Business logic
-│   ├── routes/                # API routes
-│   ├── middleware/            # Authentication & security
-│   ├── lib/                   # External service clients
-│   ├── utils/                 # Helper functions
-│   ├── types/                 # TypeScript types
-│   ├── app.ts                 # Express app
-│   └── server.ts              # Application entry point
-├── .env.example
-├── docker-compose.yml
-├── package.json
-└── tsconfig.json
-```
-
-## Quick Start
-
-### Prerequisites
-
-Before running the project, make sure the following tools are installed:
-
-- Node.js v20+
-- PostgreSQL
-- Redis
-- Docker & Docker Compose 
-
----
-
-## Option 1: Run with Docker (Recommended)
-
-1. Navigate to the backend directory:
-
-```bash
-cd Backend
-```
-
-2. Create your environment file:
-
-```bash
-cp .env.example .env
-```
-
-3. Install project dependencies:
-
-```bash
-npm install
-```
-
-4. Build and start all services:
-
-```bash
-npm run docker:up
-```
-
-> This starts the Node.js application, PostgreSQL database, and Redis cache inside Docker containers.
-
-5. View container logs (optional):
-
-```bash
-npm run docker:logs
-```
-
-6. Stop all running containers:
-
-```bash
-npm run docker:down
-```
-
----
-
-## Option 2: Run Locally
-
-1. Navigate to the backend directory:
-
-```bash
-cd Backend
-```
-
-2. Install dependencies:
-
-```bash
-npm install
-```
-
-3. Create your environment file:
-
-```bash
-cp .env.example .env
-```
-
-4. Apply database migrations and generate the Prisma Client:
-
-```bash
-npx prisma migrate dev
-npx prisma generate
-```
-
-5. Seed the database (optional):
-
-```bash
-npm run seed
-```
-
-6. Start the development server:
-
-```bash
-npm run dev
-```
-
-The backend API will be available at:
-
-```text
-http://localhost:8000
-```
-
-The interactive Swagger documentation will be available at:
-
-```text
-http://localhost:8000/api-docs
-```
-
-## Environment Variables
-
-Create a `.env` file inside the `Backend` directory by copying the example file:
-
-```bash
-cd Backend
-
-cp .env.example .env
-```
-
-Update the required environment variables before running the application.
-
-The project requires configuration for:
-
-- PostgreSQL Database
-- Redis
-- JWT Secret
-- Google OAuth
 - GitHub OAuth
-- Google Gemini AI
-- Cloudinary
-- SSLCommerz Payment Gateway
+- Protected routes & APIs
+- Password-based authentication
+- Zod environment validation
+- Helmet security headers
+- CORS configuration
+- HPP protection
+- Express rate limiting
+- Redis-backed rate limiting
+- Secure HTTP-only cookie support
 
-See `.env.example` for the complete list of required variables.
+## **Payment & Subscription**
 
+The platform includes a complete subscription-oriented architecture.
 
----
+- Subscription plans
+- AI credit allocation
+- Order creation
+- Payment processing
+- Payment status tracking
+- Completed/pending/failed order states
+- SSLCommerz Sandbox integration
+- Transaction ID tracking
 
-## API Documentation
+> **Note:** SSLCommerz is configured for sandbox/testing purposes only.
 
-**Base URL**
+## **Admin Analytics**
 
-```text
-http://localhost:8000/api/v1
-```
+The Admin Dashboard uses **raw PostgreSQL SQL queries** for reporting and analytics instead of relying entirely on ORM abstractions.
 
-The API is organized into the following modules:
+It provides:
 
-- Authentication
-- AI Projects
-- Orders & Payments
-- Admin
+- Total users
+- Total orders
+- Total revenue
+- Total projects
+- Completed/pending/failed orders
+- Active subscriptions
+- Generated images/videos
+- Today's activity
+- Recent system activity
+- Daily/weekly/monthly time-series data
 
-### Authentication
+> Using raw SQL for analytics demonstrates practical knowledge of **SQL, aggregation, joins, filtering, grouping, date-based reporting, and database-level querying**.
 
-| Method  |       Endpoint         | Authentication |       Description        |
-|---------|------------------------|----------------|--------------------------|
-| GET     | `/auth/google/login`   |      NO        | Redirect to Google OAuth |
-| GET     | `/auth/google/callback`|      NO        | Google OAuth callback    |
-| GET     | `/auth/github/login`   |      NO        | Redirect to GitHub OAuth |
-| GET     | `/auth/github/callback`|      NO        | GitHub OAuth callback    |
-| POST    | `/auth/refresh`        |    COOKIES     | Refresh access token     |
-| POST    | `/auth/logout`         |      JWT       | Logout current session   |
-| GET     | `/auth/me`             |      JWT       | Get current user         |
+## **Tech Stack**
 
-### AI Projects
+**Frontend:** React, TypeScript, Vite, Tailwind CSS
 
-| Method  |          Endpoint          | Authentication |           Description              |
-|---------|----------------------------|----------------|------------------------------------|
-| POST    | `/projects`                |      JWT       | Create AI image generation project |
-| POST    | `/projects/generate-video` |      JWT       | Generate AI marketing video        |
+**Backend:** Node.js, Express.js, TypeScript
 
-### Payments
+**Database:** PostgreSQL, Prisma ORM
 
-| Method  |       Endpoint     | Authentication |        Description           |
-|---------|--------------------|----------------|------------------------------|
-| POST    | `/orders`          |       JWT      | Create order                 |
-| GET     | `/ssl/:orderId`    |       NO       | Redirect to SSLCommerz       |
-| POST    | `/payment/success` |       NO       | Payment success callback     |
-| POST    | `/payment/fail`    |       NO       | Payment failed callback      |
-| POST    | `/payment/cancel`  |       NO       | Payment cancelled callback   |
-| POST    | `/payment/ipn`     |       NO       | Instant Payment Notification |
+**AI:** Google Gemini API
 
-### Admin
+**Authentication:** JWT, Google OAuth, GitHub OAuth
 
-| Method  |            Endpoint            | Authentication |    Description         |
-|---------|--------------------------------|----------------|------------------------|
-| GET     | `/admin/stats`                 |      Admin     | Dashboard statistics   |
-| GET     | `/admin/users`                 |      Admin     | List users             |
-| PATCH   | `/admin/users/:userId/role`    |      Admin     | Update user role       |
-| DELETE  | `/admin/users/:userId`         |      Admin     | Delete user            |
-| GET     | `/admin/users/search`          |      Admin     | Search users           |
-| GET     | `/admin/orders`                |      Admin     | List orders            |
-| PATCH   | `/admin/orders/:orderId/status`|      Admin     | Update order status    |
-| GET     | `/admin/logs`                  |      Admin     | Audit logs             |
-| GET     | `/admin/reports/revenue`       |      Admin     | Revenue report         |
-| GET     | `/admin/reports/export`        |      Admin     | Export CSV/PDF reports |
+**Caching:** Redis
 
-> **Note:** A complete Postman Collection is included in the repository for testing all API endpoints.
+**Storage:** Cloudinary
 
+**Payment:** SSLCommerz Sandbox
 
+**Validation:** Zod
 
-## API Testing
+**Security:** Helmet, CORS, HPP, Express Rate Limit
 
-The API can be tested using either **Swagger UI** or the included **Postman Collection**.
+**Development:** Docker, Docker Compose
 
-### Swagger UI
-
-After starting the backend server, open:
-
-```text
-http://localhost:8000/api-docs
-```
-
-> **Note:** Swagger documentation is currently being expanded and may not include every endpoint.
-
----
-
-### Postman Collection
-
-A ready-to-use Postman Collection is included in the repository.
-
-```text
-Postman/
-└── AI-Shorts-Generation-I.postman_collection.json
-```
-
-#### Steps
-
-1. Open Postman.
-2. Click **Import**.
-3. Select the collection file from the `Postman` directory.
-4. Update the `base_url` if necessary.
-5. Authenticate and test the available endpoints.
-
-## Example Requests & Responses
-
-The following examples demonstrate some of the most commonly used API endpoints.
-
----
-
-### 1. Create AI Project
-
-**Endpoint**
-
-```http
-POST /api/v1/projects
-```
-
-**Request**
-
-multipart/form-data
-
-- productImage
-- modelImage
-- projectName
-- productName
-- productDescription
-- userPrompt
-- aspectRatio
-
-**Success Response**
-
-```json
-{
-  "success": true,
-  "data": {
-    ...
-  }
-}
-```
-
----
-
-### 2. Generate AI Video
-
-**Endpoint**
-
-```http
-POST /api/v1/projects/generate-video
-```
-
-**Request**
-
-```json
-{
-  "projectId": "uuid"
-}
-```
-
-**Success Response**
-
-```json
-{
-  "success": true,
-  "data": {
-    ...
-  }
-}
-```
-
----
-
-### 3. Get Current User
-
-**Endpoint**
-
-```http
-GET /api/v1/auth/me
-```
-
-**Success Response**
-
-```json
-{
-  "success": true,
-  "data": {
-    ...
-  }
-}
-```
-
-## Author
-
-**Atikur Rahman**
-
-Backend Developer passionate about building scalable REST APIs, secure authentication systems, and AI-powered backend applications.
-
-- **GitHub:** https://github.com/atikur-web-dev
-- **Email:** atikurrahman160313@gmail.com
-
-## License
-
-This project is developed for learning, portfolio, and demonstration purposes.

@@ -4,10 +4,7 @@ import { logger } from "../../config/logger.js";
 import { prisma } from "../../lib/prisma.js";
 import { CacheService } from "../../services/cache.service.js";
 
-export const getDashboardStats = async (
-  req: Request,
-  res: Response,
-) => {
+export const getDashboardStats = async (req: Request, res: Response) => {
   try {
     const cacheKey = CacheService.generateKey("dashboard:stats", {
       user: req.user?.id,
@@ -126,11 +123,7 @@ export const getDashboardStats = async (
   }
 };
 
-
-export const getDashboardSummary = async (
-  _req: Request,
-  res: Response,
-) => {
+export const getDashboardSummary = async (_req: Request, res: Response) => {
   try {
     const [stats, today, recentActivity] = await Promise.all([
       prisma.$queryRaw<
@@ -308,11 +301,7 @@ export const getDashboardSummary = async (
   }
 };
 
-
-export const getTimeSeriesStats = async (
-  req: Request,
-  res: Response,
-) => {
+export const getTimeSeriesStats = async (req: Request, res: Response) => {
   try {
     const period = String(req.query.period ?? "daily");
 
@@ -338,13 +327,21 @@ export const getTimeSeriesStats = async (
         }>
       >`
         SELECT
-          DATE_TRUNC('day', "createdAt") AS date,
-          COUNT(*)::int AS order_count,
-          COALESCE(SUM(amount), 0)::int AS total_amount
-        FROM "orders"
-        WHERE "createdAt" >= NOW() - (${daysLimit} * INTERVAL '1 day')
-        GROUP BY DATE_TRUNC('day', "createdAt")
-        ORDER BY date ASC
+  DATE_TRUNC('day', "createdAt") AS date,
+  COUNT(*)::int AS order_count,
+  COALESCE(
+    SUM(
+      CASE
+        WHEN status = 'completed' THEN amount
+        ELSE 0
+      END
+    ),
+    0
+  )::int AS total_amount
+FROM "orders"
+WHERE "createdAt" >= NOW() - (${daysLimit} * INTERVAL '1 day')
+GROUP BY DATE_TRUNC('day', "createdAt")
+ORDER BY date ASC
       `,
 
       prisma.$queryRaw<

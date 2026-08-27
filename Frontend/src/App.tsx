@@ -1,4 +1,3 @@
-
 // Frontend/src/App.tsx
 
 import React from "react";
@@ -12,17 +11,18 @@ import {
 } from "react-router-dom";
 
 import { AuthProvider, useAuth } from "./context/AuthContext";
-
 import Navbar from "./components/Navbar";
 import LoadingSpinner from "./components/LoadingSpinner";
-
+import About from "./pages/About";
+import Services from "./pages/Services";
+import Contact from "./pages/Contact";
 import Subscriptions from "./pages/Subscriptions";
 import LandingPage from "./pages/LandingPage";
 import LoginPage from "./pages/LoginPage";
 import Dashboard from "./pages/Dashboard";
 import CreateProject from "./pages/CreateProject";
 import Callback from "./pages/Callback";
-
+import AdminRevenueReport from "./pages/AdminRevenueReport";
 import AdminLogin from "./pages/AdminLogin";
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminUsers from "./pages/AdminUsers";
@@ -97,28 +97,17 @@ const AdminRoute: React.FC<{
   // admin login is handled from the Administrator
   // modal inside LoginPage.
   if (!user) {
-    return (
-      <Navigate
-        to="/login"
-        replace
-      />
-    );
+    return <Navigate to="/login" replace />;
   }
 
   // Authenticated user exists, but they are not an admin.
   if (user.role !== "ADMIN") {
-    return (
-      <Navigate
-        to="/dashboard"
-        replace
-      />
-    );
+    return <Navigate to="/dashboard" replace />;
   }
 
   // Authenticated administrator.
   return <>{children}</>;
 };
-
 
 /**
  * Controls whether the normal Navbar is displayed.
@@ -152,12 +141,10 @@ function App() {
             {/* =====================================================
                 PUBLIC ROUTES
             ====================================================== */}
-
-            <Route
-              path="/"
-              element={<LandingPage />}
-            />
-
+            <Route path="/" element={<LandingPage />} />
+            <Route path="/about" element={<About />} />{" "}
+            <Route path="/services" element={<Services />} />{" "}
+            <Route path="/contact" element={<Contact />} />
             <Route
               path="/login"
               element={
@@ -166,16 +153,10 @@ function App() {
                 </PublicRoute>
               }
             />
-
-            <Route
-              path="/callback"
-              element={<Callback />}
-            />
-
+            <Route path="/callback" element={<Callback />} />
             {/* =====================================================
                 USER PROTECTED ROUTES
             ====================================================== */}
-
             <Route
               path="/dashboard"
               element={
@@ -184,7 +165,6 @@ function App() {
                 </ProtectedRoute>
               }
             />
-
             <Route
               path="/create-project"
               element={
@@ -193,7 +173,6 @@ function App() {
                 </ProtectedRoute>
               }
             />
-
             <Route
               path="/subscriptions"
               element={
@@ -202,20 +181,13 @@ function App() {
                 </ProtectedRoute>
               }
             />
-
             {/* =====================================================
                 ADMIN LOGIN
             ====================================================== */}
-
-            <Route
-              path="/admin-login"
-              element={<AdminLogin />}
-            />
-
+            <Route path="/admin-login" element={<AdminLogin />} />
             {/* =====================================================
                 ADMIN PROTECTED ROUTES
             ====================================================== */}
-
             {/* Main Admin Dashboard */}
             <Route
               path="/admin"
@@ -225,7 +197,6 @@ function App() {
                 </AdminRoute>
               }
             />
-
             {/* Admin Dashboard Alias */}
             <Route
               path="/admin/dashboard"
@@ -235,7 +206,6 @@ function App() {
                 </AdminRoute>
               }
             />
-
             {/* Admin Users */}
             <Route
               path="/admin/users"
@@ -245,7 +215,6 @@ function App() {
                 </AdminRoute>
               }
             />
-
             {/* Admin Orders */}
             <Route
               path="/admin/orders"
@@ -255,7 +224,6 @@ function App() {
                 </AdminRoute>
               }
             />
-
             {/* Admin Subscriptions */}
             <Route
               path="/admin/subscriptions"
@@ -265,7 +233,6 @@ function App() {
                 </AdminRoute>
               }
             />
-
             {/* Admin Projects */}
             <Route
               path="/admin/projects"
@@ -275,17 +242,18 @@ function App() {
                 </AdminRoute>
               }
             />
-
+            <Route
+              path="/admin/reports/revenue"
+              element={
+                <AdminRoute>
+                  <AdminRevenueReport />
+                </AdminRoute>
+              }
+            />
             {/* =====================================================
                 UNKNOWN ROUTES
             ====================================================== */}
-
-            <Route
-              path="*"
-              element={
-                <Navigate to="/" replace />
-              }
-            />
+            <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </AppLayout>
       </Router>
