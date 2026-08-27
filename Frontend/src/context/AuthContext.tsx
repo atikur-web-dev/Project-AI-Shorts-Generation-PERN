@@ -1,4 +1,3 @@
-
 import React, {
   createContext,
   useContext,
@@ -6,14 +5,14 @@ import React, {
   useState,
 } from "react";
 
-import { User } from "../types";
+import type { User } from "../types";
 import { authService } from "../services/authService";
 
 interface AuthContextType {
   user: User | null;
   loading: boolean;
   login: (user: User, token: string) => void;
-  logout: () => void;
+  logout: () => Promise<void>;
   checkAuth: () => Promise<void>;
 }
 
@@ -27,55 +26,46 @@ export const AuthProvider: React.FC<{
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
-  /**
-   * Login
-   *
-   * Stores the authenticated user in React state
-   * and stores the access token in localStorage.
-   */
   const login = (userData: User, token: string) => {
     setUser(userData);
     authService.setAccessToken(token);
 
-    // Keep admin session information in sync.
+    // Keep admin state synchronized.
     if (userData.role === "ADMIN") {
       localStorage.setItem("isAdmin", "true");
+      localStorage.setItem("adminEmail", userData.email);
       localStorage.setItem(
         "adminUser",
         JSON.stringify(userData),
       );
-      localStorage.setItem("adminEmail", userData.email);
     } else {
       localStorage.removeItem("isAdmin");
-      localStorage.removeItem("adminUser");
       localStorage.removeItem("adminEmail");
+      localStorage.removeItem("adminUser");
     }
   };
 
-  /**
-   * Logout
-   */
-  const logout = () => {
-    setUser(null);
+  const logout = async () => {
+    try {
+      await authService.logout();
+    } catch (error) {
+      console.error("Logout request failed:", error);
+    } finally {
+      setUser(null);
+      authService.clearAccessToken();
 
-    authService.clearAccessToken();
-
-    // Clear admin-specific session data as well.
-    localStorage.removeItem("isAdmin");
-    localStorage.removeItem("adminUser");
-    localStorage.removeItem("adminEmail");
+      localStorage.removeItem("isAdmin");
+      localStorage.removeItem("adminEmail");
+      localStorage.removeItem("adminUser");
+    }
   };
 
-  /**
-   * Check whether the existing access token is still valid.
-   */
   const checkAuth = async () => {
     try {
       const token = authService.getAccessToken();
 
       if (!token) {
         setUser(null);
-        setLoading(false);
         return;
       }
 
@@ -84,29 +74,24 @@ export const AuthProvider: React.FC<{
       if (response.success && response.user) {
         setUser(response.user);
 
-        // Synchronize admin state after page refresh.
         if (response.user.role === "ADMIN") {
           localStorage.setItem("isAdmin", "true");
-          localStorage.setItem(
-            "adminUser",
-            JSON.stringify(response.user),
-          );
           localStorage.setItem(
             "adminEmail",
             response.user.email,
           );
+          localStorage.setItem(
+            "adminUser",
+            JSON.stringify(response.user),
+          );
         } else {
           localStorage.removeItem("isAdmin");
-          localStorage.removeItem("adminUser");
           localStorage.removeItem("adminEmail");
+          localStorage.removeItem("adminUser");
         }
       } else {
         setUser(null);
         authService.clearAccessToken();
-
-        localStorage.removeItem("isAdmin");
-        localStorage.removeItem("adminUser");
-        localStorage.removeItem("adminEmail");
       }
     } catch (error) {
       console.error("Auth check failed:", error);
@@ -115,15 +100,15 @@ export const AuthProvider: React.FC<{
       authService.clearAccessToken();
 
       localStorage.removeItem("isAdmin");
-      localStorage.removeItem("adminUser");
       localStorage.removeItem("adminEmail");
+      localStorage.removeItem("adminUser");
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    checkAuth();
+    void checkAuth();
   }, []);
 
   return (
@@ -144,7 +129,7 @@ export const AuthProvider: React.FC<{
 export const useAuth = () => {
   const context = useContext(AuthContext);
 
-  if (context === undefined) {
+  if (!context) {
     throw new Error(
       "useAuth must be used within an AuthProvider",
     );

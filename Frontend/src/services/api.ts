@@ -1,4 +1,3 @@
-
 import axios from "axios";
 
 const API_BASE_URL =
@@ -14,7 +13,6 @@ const api = axios.create({
   withCredentials: true,
 });
 
-// Request interceptor
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem("accessToken");
@@ -25,23 +23,17 @@ api.interceptors.request.use(
 
     return config;
   },
-  (error) => {
-    return Promise.reject(error);
-  },
+  (error) => Promise.reject(error),
 );
 
-// Response interceptor
 api.interceptors.response.use(
   (response) => response,
-
   async (error) => {
     console.error("API Error:", error);
 
-    const status = error.response?.status;
-    const requestUrl = error.config?.url || "";
+    if (error.response?.status === 401) {
+      const requestUrl = error.config?.url || "";
 
-    if (status === 401) {
-      // Authentication endpoints should handle their own errors.
       const isAuthRequest =
         requestUrl.includes("/auth/admin/login") ||
         requestUrl.includes("/auth/refresh") ||
@@ -50,24 +42,12 @@ api.interceptors.response.use(
         requestUrl.includes("/auth/github");
 
       if (!isAuthRequest) {
-        const isAdminRequest =
-          requestUrl.includes("/admin/");
-
-        // Clear invalid authentication data.
         localStorage.removeItem("accessToken");
+        localStorage.removeItem("isAdmin");
+        localStorage.removeItem("adminEmail");
+        localStorage.removeItem("adminUser");
 
-        if (isAdminRequest) {
-          // Clear admin-specific session data.
-          localStorage.removeItem("isAdmin");
-          localStorage.removeItem("adminEmail");
-          localStorage.removeItem("adminUser");
-
-          // Send admin back to admin login.
-          window.location.href = "/admin-login";
-        } else {
-          // Normal user session expired.
-          window.location.href = "/login";
-        }
+        window.location.href = "/login";
       }
     }
 
