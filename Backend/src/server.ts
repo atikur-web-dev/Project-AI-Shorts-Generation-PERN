@@ -5,26 +5,33 @@ import { app } from "./app.js";
 import { config } from "./config/index.js";
 import { logger } from "./config/logger.js";
 import { prisma } from "./lib/prisma.js";
+import { connectRedis } from "./lib/redis.js";
 
-const { PORT } = config;
+const PORT = Number(process.env.PORT) || config.PORT || 8000;
+const HOST = "0.0.0.0";
 
 async function startServer() {
   console.log("SERVER.JS STARTED");
+  console.log("PORT =", PORT);
+  console.log("HOST =", HOST);
 
   try {
-    console.log("PORT =", PORT);
+    console.log("Attempting Redis connection...");
+
+    await connectRedis();
+
+    logger.info("Redis connection established");
+
     console.log("Attempting database connection...");
 
-    // Database connection check
     await prisma.$connect();
 
     logger.info("Database Connected Successfully");
 
-    // Start server
-    app.listen(PORT, "0.0.0.0", () => {
-      logger.info(`Server is running on ${config.APP_URL}`);
+    app.listen(PORT, HOST, () => {
+      logger.info(`Server is running on ${HOST}:${PORT}`);
       logger.info(`Environment: ${config.NODE_ENV}`);
-      logger.info(`Health Check: ${config.APP_URL}/health`);
+      logger.info(`Health Check: http://${HOST}:${PORT}/health`);
     });
   } catch (error) {
     logger.error("Failed to start server", error);
