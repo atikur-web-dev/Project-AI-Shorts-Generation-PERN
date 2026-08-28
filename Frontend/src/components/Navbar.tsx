@@ -1,4 +1,6 @@
+
 // Frontend/src/components/Navbar.tsx
+
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -6,34 +8,12 @@ import {
   LayoutDashboard,
   ChevronDown,
   UserRound,
+  Home,
+  Info,
+  Briefcase,
+  Mail,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
-
-const HomeIcon: React.FC<{ size?: number }> = ({ size = 17 }) => (
-  <svg
-    width={size}
-    height={size}
-    viewBox="0 0 24 24"
-    fill="none"
-    xmlns="http://www.w3.org/2000/svg"
-    aria-hidden="true"
-  >
-    <path
-      d="M3 10.5L12 3L21 10.5V20C21 20.5523 20.5523 21 20 21H4C3.44772 21 3 20.5523 3 20V10.5Z"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-    <path
-      d="M9 21V13H15V21"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-  </svg>
-);
 
 const Navbar: React.FC = () => {
   const { user, logout } = useAuth();
@@ -85,14 +65,9 @@ const Navbar: React.FC = () => {
             </div>
           </button>
 
-          {/* =========================
-              RIGHT SIDE
-          ========================== */}
-
           {!user ? (
-            /* =================================
-               VISITOR / NOT LOGGED IN
-            ================================== */
+
+  
             <div className="flex items-center gap-1 sm:gap-2">
 
               {/* Home */}
@@ -101,7 +76,7 @@ const Navbar: React.FC = () => {
                 onClick={() => navigate("/")}
                 className="hidden items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-gray-600 transition hover:bg-gray-100 hover:text-gray-900 sm:flex"
               >
-                <HomeIcon size={17} />
+                <Home size={17} />
                 Home
               </button>
 
@@ -109,8 +84,9 @@ const Navbar: React.FC = () => {
               <button
                 type="button"
                 onClick={() => navigate("/about")}
-                className="hidden rounded-lg px-3 py-2 text-sm font-medium text-gray-600 transition hover:bg-gray-100 hover:text-gray-900 sm:block"
+                className="hidden items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-gray-600 transition hover:bg-gray-100 hover:text-gray-900 sm:flex"
               >
+                <Info size={17} />
                 About
               </button>
 
@@ -118,8 +94,9 @@ const Navbar: React.FC = () => {
               <button
                 type="button"
                 onClick={() => navigate("/services")}
-                className="hidden rounded-lg px-3 py-2 text-sm font-medium text-gray-600 transition hover:bg-gray-100 hover:text-gray-900 sm:block"
+                className="hidden items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-gray-600 transition hover:bg-gray-100 hover:text-gray-900 sm:flex"
               >
+                <Briefcase size={17} />
                 Services
               </button>
 
@@ -127,8 +104,9 @@ const Navbar: React.FC = () => {
               <button
                 type="button"
                 onClick={() => navigate("/contact")}
-                className="hidden rounded-lg px-3 py-2 text-sm font-medium text-gray-600 transition hover:bg-gray-100 hover:text-gray-900 sm:block"
+                className="hidden items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-gray-600 transition hover:bg-gray-100 hover:text-gray-900 sm:flex"
               >
+                <Mail size={17} />
                 Contact
               </button>
 
@@ -142,7 +120,9 @@ const Navbar: React.FC = () => {
                 Sign in
               </button>
             </div>
+
           ) : (
+
             /* =================================
                LOGGED-IN USER / ADMIN
             ================================== */
@@ -154,7 +134,7 @@ const Navbar: React.FC = () => {
                 onClick={() => navigate("/")}
                 className="hidden items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-gray-600 transition hover:bg-gray-100 hover:text-gray-900 sm:flex"
               >
-                <HomeIcon size={17} />
+                <Home size={17} />
                 Home
               </button>
 
@@ -167,8 +147,7 @@ const Navbar: React.FC = () => {
                 className="hidden items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-gray-600 transition hover:bg-gray-100 hover:text-gray-900 sm:flex"
               >
                 <LayoutDashboard size={17} />
-
-                {isAdmin ? "Dashboard" : "Dashboard"}
+                Dashboard
               </button>
 
               {/* Divider */}
@@ -182,8 +161,10 @@ const Navbar: React.FC = () => {
                   type="button"
                   className="flex items-center gap-2 rounded-xl px-2 py-1.5 transition hover:bg-gray-50"
                 >
+
                   {/* Avatar */}
                   <div className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full bg-primary-100 ring-2 ring-white">
+
                     {user.picture && !imageError ? (
                       <img
                         src={user.picture}
@@ -196,6 +177,7 @@ const Navbar: React.FC = () => {
                         {getInitials(user.name)}
                       </span>
                     )}
+
                   </div>
 
                   {/* Name */}
@@ -224,6 +206,7 @@ const Navbar: React.FC = () => {
 
                       {/* Avatar */}
                       <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary-100">
+
                         {user.picture && !imageError ? (
                           <img
                             src={user.picture}
@@ -236,6 +219,7 @@ const Navbar: React.FC = () => {
                             {getInitials(user.name)}
                           </span>
                         )}
+
                       </div>
 
                       {/* User Info */}
@@ -248,6 +232,7 @@ const Navbar: React.FC = () => {
                           {user.email}
                         </p>
                       </div>
+
                     </div>
                   </div>
 
@@ -257,7 +242,7 @@ const Navbar: React.FC = () => {
                     onClick={() => navigate("/")}
                     className="mt-1 flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-gray-600 transition hover:bg-gray-50 hover:text-gray-900"
                   >
-                    <HomeIcon size={17} />
+                    <Home size={17} />
                     Home
                   </button>
 
@@ -282,6 +267,7 @@ const Navbar: React.FC = () => {
                     <LogOut size={17} />
                     Sign out
                   </button>
+
                 </div>
               </div>
             </div>
@@ -293,3 +279,4 @@ const Navbar: React.FC = () => {
 };
 
 export default Navbar;
+
