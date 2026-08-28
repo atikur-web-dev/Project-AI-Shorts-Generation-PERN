@@ -1,3 +1,4 @@
+
 import "dotenv/config";
 
 import { app } from "./app.js";
@@ -14,11 +15,13 @@ async function startServer() {
     console.log("PORT =", PORT);
     console.log("Attempting database connection...");
 
+    // Database connection check
     await prisma.$connect();
 
     logger.info("Database Connected Successfully");
 
-    app.listen(PORT, () => {
+    // Start server
+    app.listen(PORT, "0.0.0.0", () => {
       logger.info(`Server is running on ${config.APP_URL}`);
       logger.info(`Environment: ${config.NODE_ENV}`);
       logger.info(`Health Check: ${config.APP_URL}/health`);
