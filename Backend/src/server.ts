@@ -8,16 +8,16 @@ import { prisma } from "./lib/prisma.js";
 const { PORT } = config;
 
 async function startServer() {
+  console.log("SERVER.JS STARTED");
+
   try {
     console.log("PORT =", PORT);
     console.log("Attempting database connection...");
 
-    // Database connection check
     await prisma.$connect();
 
     logger.info("Database Connected Successfully");
 
-    // Start server
     app.listen(PORT, () => {
       logger.info(`Server is running on ${config.APP_URL}`);
       logger.info(`Environment: ${config.NODE_ENV}`);
