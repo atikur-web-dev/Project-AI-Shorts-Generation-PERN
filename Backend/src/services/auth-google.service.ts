@@ -10,7 +10,11 @@ import {
 import type { SessionData } from "../types/auth.types.js";
 
 // Google OAuth Configuration
-const { GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REDIRECT_URL } = config;
+const {
+  GOOGLE_CLIENT_ID,
+  GOOGLE_CLIENT_SECRET,
+  GOOGLE_REDIRECT_URL,
+} = config;
 
 const oauth2Client = new google.auth.OAuth2(
   GOOGLE_CLIENT_ID,
@@ -35,21 +39,28 @@ export const getGoogleAuthUrl = (): string => {
 export const handleGoogleCallback = async (
   code: string,
 ): Promise<SessionData> => {
-  // Exchange code for tokens
+  // Exchange authorization code for Google tokens
   const { tokens } = await oauth2Client.getToken(code);
+
   oauth2Client.setCredentials(tokens);
 
-  // Fetch user profile
-  const oauth2 = google.oauth2({ auth: oauth2Client, version: "v2" });
+  // Fetch Google user profile
+  const oauth2 = google.oauth2({
+    auth: oauth2Client,
+    version: "v2",
+  });
+
   const { data } = await oauth2.userinfo.get();
 
   if (!data.email) {
-    throw new Error("Email could not found");
+    throw new Error("Email could not be found");
   }
 
   // Get or create free subscription
   let freeSubscription = await prisma.subscription.findUnique({
-    where: { name: "free" },
+    where: {
+      name: "free",
+    },
   });
 
   if (!freeSubscription) {
@@ -62,55 +73,86 @@ export const handleGoogleCallback = async (
     });
   }
 
-  // Upsert user in database
-  const user = await prisma.user.upsert({
-    where: { email: data.email },
-    update: {
-      name: data.name || "",
-      picture: data.picture || "",
-      googleId: data.id || "",
-    },
-    create: {
+  // Find existing user by email
+  const existingUser = await prisma.user.findUnique({
+    where: {
       email: data.email,
-      name: data.name || "",
-      picture: data.picture || "",
-      googleId: data.id || "",
-      githubId: "",
-      loginType: "google",
-      userSubscription: {
-        create: {
-          credits: 30,
-          subscription: {
-            connect: {
-              id: freeSubscription.id,
+    },
+  });
+
+  let user;
+
+  if (existingUser) {
+    // Existing user:
+    // Update Google information without touching githubId.
+    user = await prisma.user.update({
+      where: {
+        id: existingUser.id,
+      },
+      data: {
+        name: data.name || "",
+        picture: data.picture || "",
+        googleId: data.id || "",
+        loginType: "google",
+      },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        picture: true,
+        loginType: true,
+        role: true,
+      },
+    });
+  } else {
+    // New Google user.
+    // IMPORTANT:
+    // Do NOT set githubId to "" because githubId is unique.
+    user = await prisma.user.create({
+      data: {
+        email: data.email,
+        name: data.name || "",
+        picture: data.picture || "",
+        googleId: data.id || "",
+        loginType: "google",
+
+        userSubscription: {
+          create: {
+            credits: 30,
+            subscription: {
+              connect: {
+                id: freeSubscription.id,
+              },
             },
           },
         },
       },
-    },
-    select: {
-      id: true,
-      email: true,
-      name: true,
-      picture: true,
-      loginType: true,
-      role: true,
-    },
-  });
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        picture: true,
+        loginType: true,
+        role: true,
+      },
+    });
+  }
 
   // Create session
   const refreshToken = generateRefreshToken();
-  console.log("Refresh Token :", refreshToken);
   const hashedRefreshToken = hashToken(refreshToken);
 
   await prisma.session.create({
     data: {
       userId: user.id,
       refreshToken: hashedRefreshToken,
-      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      expiresAt: new Date(
+        Date.now() + 7 * 24 * 60 * 60 * 1000,
+      ),
     },
   });
 
+  // Generate access token
   const accessToken = generateAccessToken(user.id);
 
   return {

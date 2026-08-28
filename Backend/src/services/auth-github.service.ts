@@ -11,13 +11,14 @@ import axios from "axios";
 
 // Generate GitHub Login URL
 export const getGitHubAuthUrl = (): string => {
-  const param = new URLSearchParams({
+  const params = new URLSearchParams({
     client_id: config.GITHUB_CLIENT_ID,
-    redirect_url: config.GITHUB_REDIRECT_URL,
+    redirect_uri: config.GITHUB_REDIRECT_URL,
     scope: "user:email",
     allow_signup: "true",
   });
-  return `https://github.com/login/oauth/authorize?${param.toString()}`;
+
+  return `https://github.com/login/oauth/authorize?${params.toString()}`;
 };
 
 // Process GitHub Callback
@@ -34,27 +35,34 @@ export const handleGitHubCallback = async (
       redirect_uri: config.GITHUB_REDIRECT_URL,
     },
     {
-      headers: { Accept: "application/json" },
+      headers: {
+        Accept: "application/json",
+      },
     },
   );
 
   const accessToken = tokenResponse.data.access_token;
+
   if (!accessToken) {
-    throw new Error("Failed to get GitHub access Token");
+    throw new Error("Failed to get GitHub access token");
   }
 
-  // Get user data
-  const userResponse = await axios.get("https://api.github.com/user", {
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      Accept: "application/json",
+  // Get GitHub user data
+  const userResponse = await axios.get(
+    "https://api.github.com/user",
+    {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        Accept: "application/json",
+      },
     },
-  });
+  );
 
   const githubUser = userResponse.data;
 
-  // Get user email (handle cases where email is private)
+  // Get user email
   let email = githubUser.email;
+
   if (!email) {
     const emailResponse = await axios.get(
       "https://api.github.com/user/emails",
@@ -65,8 +73,14 @@ export const handleGitHubCallback = async (
         },
       },
     );
-    const primaryEmail = emailResponse.data.find((e: any) => e.primary);
-    email = primaryEmail?.email || `${githubUser.id}@github.user`;
+
+    const primaryEmail = emailResponse.data.find(
+      (e: any) => e.primary && e.verified,
+    );
+
+    email =
+      primaryEmail?.email ||
+      `${githubUser.id}@github.user`;
   }
 
   if (!email) {
@@ -75,7 +89,9 @@ export const handleGitHubCallback = async (
 
   // Get or create free subscription
   let freeSubscription = await prisma.subscription.findUnique({
-    where: { name: "free" },
+    where: {
+      name: "free",
+    },
   });
 
   if (!freeSubscription) {
@@ -88,44 +104,70 @@ export const handleGitHubCallback = async (
     });
   }
 
-  // Upsert user in database
-  const user = await prisma.user.upsert({
-    where: { email },
-    update: {
-      name: githubUser.name || githubUser.login || "",
-      picture: githubUser.avatar_url || "",
-      // Cast to any to avoid TypeScript error if the Prisma schema doesn't include githubId
-      // (keeps intended behavior if the field exists at runtime)
-      ...({ githubId: String(githubUser.id) } as any),
-    },
-    create: {
+  // Find existing user by email
+  const existingUser = await prisma.user.findUnique({
+    where: {
       email,
-      name: githubUser.name || githubUser.login || "",
-      picture: githubUser.avatar_url || "",
-      // Cast to any to avoid TypeScript error if the Prisma schema doesn't include githubId
-      ...({ githubId: String(githubUser.id) } as any),
-      googleId: "",
-      loginType: "github",
-      userSubscription: {
-        create: {
-          credits: 30,
-          subscription: {
-            connect: {
-              id: freeSubscription.id,
+    },
+  });
+
+  let user;
+
+  if (existingUser) {
+    // Existing user:
+    // Update GitHub information without touching googleId.
+    user = await prisma.user.update({
+      where: {
+        id: existingUser.id,
+      },
+      data: {
+        name: githubUser.name || githubUser.login || "",
+        picture: githubUser.avatar_url || "",
+        githubId: String(githubUser.id),
+        loginType: "github",
+      },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        picture: true,
+        loginType: true,
+        role: true,
+      },
+    });
+  } else {
+    // New GitHub user.
+    // IMPORTANT:
+    // Do NOT set googleId to "" because googleId is unique.
+    user = await prisma.user.create({
+      data: {
+        email,
+        name: githubUser.name || githubUser.login || "",
+        picture: githubUser.avatar_url || "",
+        githubId: String(githubUser.id),
+        loginType: "github",
+
+        userSubscription: {
+          create: {
+            credits: 30,
+            subscription: {
+              connect: {
+                id: freeSubscription.id,
+              },
             },
           },
         },
       },
-    },
-    select: {
-      id: true,
-      email: true,
-      name: true,
-      picture: true,
-      loginType: true,
-      role: true,
-    },
-  });
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        picture: true,
+        loginType: true,
+        role: true,
+      },
+    });
+  }
 
   // Create session
   const refreshToken = generateRefreshToken();
@@ -135,10 +177,13 @@ export const handleGitHubCallback = async (
     data: {
       userId: user.id,
       refreshToken: hashedRefreshToken,
-      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      expiresAt: new Date(
+        Date.now() + 7 * 24 * 60 * 60 * 1000,
+      ),
     },
   });
 
+  // Generate access token
   const accessTokenJwt = generateAccessToken(user.id);
 
   return {
